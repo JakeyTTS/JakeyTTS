@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "JakeyTTS (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "JakeyTTS (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

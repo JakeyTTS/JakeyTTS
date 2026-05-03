@@ -1,0 +1,72 @@
+<Page
+    x:Class="JakeyTTS.TTSConfigPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Margin="40" MaxWidth="600" HorizontalAlignment="Left">
+
+            <!-- Service Control -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Service Control" Style="{StaticResource TitleTextBlockStyle}"/>
+                <Button x:Name="ConnectBtn" Click="Connect_Click" Style="{StaticResource AccentButtonStyle}" Padding="16,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <SymbolIcon x:Name="ConnectIcon" Symbol="Play"/>
+                        <TextBlock x:Name="ConnectText" Text="Connect &amp; Start Service"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <MenuFlyoutSeparator/>
+
+            <!-- Test TTS -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Test TTS" Style="{StaticResource TitleTextBlockStyle}"/>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TestInput" PlaceholderText="Type a test message..." Text="Testing Jakey TTS voice output!"/>
+                    <Button Grid.Column="1" Content="Speak" Click="Test_Click" Width="80"/>
+                </Grid>
+            </StackPanel>
+
+            <MenuFlyoutSeparator/>
+
+            <!-- Voice Settings -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Voice Settings" Style="{StaticResource TitleTextBlockStyle}"/>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Language Family" FontWeight="SemiBold" Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <ComboBox x:Name="LanguageCombo" Width="280" SelectionChanged="LanguageCombo_SelectionChanged"/>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Specific Voice" FontWeight="SemiBold" Style="{StaticResource CaptionTextBlockStyle}"/>
+                    <ComboBox x:Name="VoiceCombo" Width="280" SelectionChanged="VoiceCombo_SelectionChanged"/>
+                </StackPanel>
+            </StackPanel>
+
+            <MenuFlyoutSeparator/>
+
+            <!-- Accounts & Toggles -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Twitch Configuration" Style="{StaticResource TitleTextBlockStyle}"/>
+
+                <Button x:Name="LinkStreamerBtn" Click="LinkStreamer_Click" Width="280"/>
+                <Button x:Name="LinkBotBtn" Click="LinkBot_Click" Width="280"/>
+
+                <StackPanel Spacing="4" Margin="0,10,0,0">
+                    <CheckBox x:Name="ReadChatToggle" Content="Enable Auto-Chat TTS" Click="SettingChanged"/>
+                    <CheckBox x:Name="TestModeToggle" Content="Test Mode (No Chat Replies)" Click="SettingChanged" Foreground="OrangeRed"/>
+                </StackPanel>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

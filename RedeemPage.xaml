@@ -1,0 +1,51 @@
+<Page
+    x:Class="JakeyTTS.RedeemPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls">
+
+    <Grid Margin="40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Scripting Info Panel (Same tags work here!) -->
+        <Expander Grid.Row="1" Header="Redemption Scripting Guide" HorizontalAlignment="Stretch" Margin="0,0,0,20">
+            <StackPanel Padding="16" Spacing="4">
+                <TextBlock Text="If 'TTS Response' is empty, it will read the user's message." FontSize="12" FontStyle="Italic" Margin="0,0,0,8"/>
+                <TextBlock Text="• {user} - The person who redeemed" FontSize="12"/>
+                <TextBlock Text="• {target} - The text the user typed into the reward" FontSize="12"/>
+                <TextBlock Text="• [speed: 0.5] - Slow down the reward voice" FontSize="12" Foreground="SkyBlue"/>
+            </StackPanel>
+        </Expander>
+
+        <Border Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+            <controls:DataGrid x:Name="RedeemsGrid" 
+                               AutoGenerateColumns="False" 
+                               SelectionMode="Single"
+                               RowHeight="48">
+                <controls:DataGrid.Columns>
+                    <controls:DataGridCheckBoxColumn Header="On" Binding="{Binding IsEnabled, Mode=TwoWay}" Width="50"/>
+                    <controls:DataGridTextColumn Header="Twitch Reward Name" Binding="{Binding Name}" IsReadOnly="True" Width="200"/>
+                    <controls:DataGridTextColumn Header="Custom TTS Response" Binding="{Binding FixedText, Mode=TwoWay}" Width="*"/>
+                    <controls:DataGridCheckBoxColumn Header="Chat" Binding="{Binding ShouldReplyInChat, Mode=TwoWay}" Width="65"/>
+                    <controls:DataGridCheckBoxColumn Header="Bot" Binding="{Binding ReplyAsBot, Mode=TwoWay}" Width="65"/>
+                </controls:DataGrid.Columns>
+            </controls:DataGrid>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12" Margin="0,20,0,0">
+            <Button Click="Sync_Click" Padding="16,8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <SymbolIcon Symbol="Refresh"/>
+                    <TextBlock Text="Sync from Twitch"/>
+                </StackPanel>
+            </Button>
+            <Button Content="Save All" Click="Save_Click" Style="{StaticResource AccentButtonStyle}" Padding="16,8" Width="120"/>
+        </StackPanel>
+    </Grid>
+</Page>
