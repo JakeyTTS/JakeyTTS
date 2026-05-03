@@ -57,18 +57,29 @@ namespace JakeyTTS
             try
             {
                 if (!File.Exists(ConfigPath)) return new AppConfig();
-                return JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(ConfigPath)) ?? new AppConfig();
+
+                string json = File.ReadAllText(ConfigPath);
+                // Usamos el contexto generado para deserializar
+                return JsonSerializer.Deserialize(json, JakeyJsonContext.Default.AppConfig) ?? new AppConfig();
             }
-            catch { return new AppConfig(); }
+            catch
+            {
+                return new AppConfig();
+            }
         }
 
         public void Save()
         {
             try
             {
-                File.WriteAllText(ConfigPath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+                // Pasamos el contexto generado: JakeyJsonContext.Default.AppConfig
+                string json = JsonSerializer.Serialize(this, JakeyJsonContext.Default.AppConfig);
+                File.WriteAllText(ConfigPath, json);
             }
-            catch (Exception ex) { MainWindow.Instance?.Log($"❌ Error Save: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                MainWindow.Instance?.Log($"❌ Failed to save config: {ex.Message}");
+            }
         }
 
         public void ResetToDefaults() { InitializeDefaults(); }

@@ -1,5 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+using System.Collections.Generic;
+using System.Text.Json;
 
 namespace JakeyTTS
 {
@@ -43,5 +46,14 @@ namespace JakeyTTS
             Message = message;
             Time = time;
         }
+    }
+
+    [JsonSerializable(typeof(AppConfig))]
+    [JsonSerializable(typeof(CommandItem))]
+    [JsonSerializable(typeof(RedeemItem))]
+    [JsonSerializable(typeof(List<RedeemItem>))]
+    [JsonSerializable(typeof(JsonElement))] // Necesario para las respuestas de la API de Twitch
+    internal partial class JakeyJsonContext : JsonSerializerContext
+    {
     }
 }
