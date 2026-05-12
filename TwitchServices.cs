@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,126 +13,395 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-
-// Twitch & TTS Libs
-using TwitchLib.EventSub.Websockets;
-using TwitchLib.EventSub.Websockets.Core.EventArgs;
+using JakeyTTS.Melodies;
 using KokoroSharp;
 using KokoroSharp.Core;
 using KokoroSharp.Processing;
+using KokoroSharp.Utilities;
+using NAudio.Wave;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets;
+using TwitchLib.EventSub.Websockets.Core.EventArgs;
 
 namespace JakeyTTS
 {
     public class TwitchService
     {
-        private static TwitchService _instance;
+        private static TwitchService? _instance;
         public static TwitchService Instance => _instance ??= new TwitchService();
+
+        public event EventHandler? ConnectionStateChanged;
+        public event EventHandler? TtsEngineReady;
 
         private const string ClientId = "vf3ugrnhvufgcdc7veyajsah8iw75m";
         private const string RedirectUri = "http://localhost:8888/";
         private static readonly Random _rng = new Random();
 
         public AppConfig Config { get; set; }
-        public EventSubWebsocketClient Client { get; private set; }
-        public KokoroTTS TTS { get; private set; }
+        public EventSubWebsocketClient? Client { get; private set; }
+        public KokoroWavSynthesizer? Synthesizer { get; private set; }
         public bool IsConnected => Client != null;
-
         public ObservableCollection<TtsEntry> History { get; } = new();
-        private CancellationTokenSource _cts;
+
+        private CancellationTokenSource? _cts;
         private readonly HttpClient _http = new HttpClient();
-        private SemaphoreSlim _ttsSemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _ttsSemaphore = new SemaphoreSlim(1, 1);
 
         private TwitchService()
         {
             Config = AppConfig.Load();
+            SetupAndLoadTTS();
+            MelodyService.Instance.Initialize();
+        }
 
-            // Load TTS Model in background
+        private void SetupAndLoadTTS()
+        {
             Task.Run(() => {
                 try
                 {
-                    string modelPath = Path.Combine(AppContext.BaseDirectory, "kokoro-v1.0.onnx");
-                    if (!File.Exists(modelPath)) return;
-                    TTS = KokoroTTS.LoadModel(modelPath);
-                    LogUI("🎙 Kokoro TTS Engine ready.");
+                    string appDataAssets = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JakeyTTS", "assets");
+                    string modelPath = Path.Combine(appDataAssets, "kokoro-v1.0.onnx");
+                    if (!File.Exists(modelPath)) modelPath = Path.Combine(AppContext.BaseDirectory, "kokoro-v1.0.onnx");
+
+                    if (File.Exists(modelPath))
+                    {
+                        string voicesPath = Path.Combine(Path.GetDirectoryName(modelPath), "voices");
+                        if (Directory.Exists(voicesPath))
+                        {
+                            KokoroVoiceManager.LoadVoicesFromPath(voicesPath);
+                            Synthesizer = new KokoroWavSynthesizer(modelPath);
+                            LogUI($"🎙 Kokoro Ready. {KokoroVoiceManager.Voices.Count} voices loaded.");
+                            MainWindow.Instance?.DispatcherQueue.TryEnqueue(() => TtsEngineReady?.Invoke(this, EventArgs.Empty));
+                        }
+                    }
                 }
-                catch (Exception ex) { LogUI($"❌ TTS Error: {ex.Message}"); }
+                catch (Exception ex) { LogUI($"❌ TTS Init Error: {ex.Message}"); }
             });
         }
 
-        #region Connection & Events
+        #region Audio Device Management
+        public List<string> GetAudioDevices()
+        {
+            var devices = new List<string> { "Default System Device", "None" };
+            for (int i = 0; i < WaveOut.DeviceCount; i++) devices.Add(WaveOut.GetCapabilities(i).ProductName);
+            return devices;
+        }
+
+        private List<int> GetActiveDeviceNumbers()
+        {
+            var names = new List<string> { Config.SelectedAudioDevice, Config.SelectedAudioDevice2, Config.SelectedAudioDevice3 };
+            var ids = new List<int>();
+            foreach (var name in names.Where(n => n != "None"))
+            {
+                if (name == "Default System Device") ids.Add(-1);
+                else
+                {
+                    for (int i = 0; i < WaveOut.DeviceCount; i++)
+                        if (WaveOut.GetCapabilities(i).ProductName == name) { ids.Add(i); break; }
+                }
+            }
+            return ids.Distinct().ToList();
+        }
+        #endregion
+
+        #region Audio Processing Effects (Technical Documentation)
+
+        /*
+         * REVERSE EFFECT (Temporal Phase Inversion)
+         * We iterate through the data in 2-byte blocks to preserve 16-bit sample integrity.
+         */
+        private byte[] ReverseAudio(byte[] data)
+        {
+            if (data == null || data.Length < 2) return data;
+            int sampleCount = data.Length / 2;
+            byte[] reversed = new byte[data.Length];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                int srcIdx = i * 2;
+                int destIdx = (sampleCount - 1 - i) * 2;
+                reversed[destIdx] = data[srcIdx];
+                reversed[destIdx + 1] = data[srcIdx + 1];
+            }
+            return reversed;
+        }
+
+        /*
+         * ROBOT EFFECT (Ring Modulation)
+         * Multiply carrier by a 50Hz sine wave modulator to dehumanize formants.
+         */
+        private byte[] ApplyRobotEffect(byte[] data)
+        {
+            if (data == null || data.Length < 2) return data;
+            int sampleCount = data.Length / 2;
+            byte[] processed = new byte[data.Length];
+            double frequency = 50.0;
+            double sampleRate = 24000.0;
+            for (int i = 0; i < sampleCount; i++)
+            {
+                short sample = BitConverter.ToInt16(data, i * 2);
+                double modulation = Math.Sin(2.0 * Math.PI * frequency * (i / sampleRate));
+                short robotSample = (short)(sample * modulation);
+                byte[] bytes = BitConverter.GetBytes(robotSample);
+                processed[i * 2] = bytes[0]; processed[i * 2 + 1] = bytes[1];
+            }
+            return processed;
+        }
+
+        /*
+         * ECHO EFFECT (Feedback Delay Line)
+         * Summing signal with delayed version. Includes buffer expansion for tail.
+         */
+        private byte[] ApplyEchoEffect(byte[] data, int delayMs)
+        {
+            if (data == null || data.Length < 2 || delayMs <= 0) return data;
+            int sampleRate = 24000;
+            int delaySamples = (delayMs * sampleRate) / 1000;
+            float decay = 0.45f;
+            int extraBuffer = delaySamples * 2;
+            byte[] processed = new byte[data.Length + extraBuffer];
+            int originalSampleCount = data.Length / 2;
+            for (int i = 0; i < (processed.Length / 2); i++)
+            {
+                short original = (i < originalSampleCount) ? BitConverter.ToInt16(data, i * 2) : (short)0;
+                short echo = (i >= delaySamples && (i - delaySamples) < originalSampleCount)
+                    ? (short)(BitConverter.ToInt16(data, (i - delaySamples) * 2) * decay) : (short)0;
+                short mixed = (short)Math.Clamp(original + echo, short.MinValue, short.MaxValue);
+                byte[] bytes = BitConverter.GetBytes(mixed);
+                processed[i * 2] = bytes[0]; processed[i * 2 + 1] = bytes[1];
+            }
+            return processed;
+        }
+
+        private async Task PlayWavData(byte[] data, float volume, float pitchMultiplier, Melody? activeMelody)
+        {
+            var deviceIds = GetActiveDeviceNumbers();
+            var players = new List<WaveOutEvent>();
+            var format = new WaveFormat(24000, 16, 1);
+
+            foreach (int id in deviceIds)
+            {
+                try
+                {
+                    var waveOut = new WaveOutEvent { DeviceNumber = id };
+                    IWaveProvider provider = activeMelody != null
+                        ? new MelodyWaveProvider(data, format, activeMelody)
+                        : new RawSourceWaveStream(new MemoryStream(data), new WaveFormat((int)(24000 * pitchMultiplier), 16, 1));
+
+                    waveOut.Init(provider);
+                    waveOut.Volume = volume;
+                    players.Add(waveOut);
+                    waveOut.Play();
+                }
+                catch { }
+            }
+
+            while (players.Any(p => p.PlaybackState == PlaybackState.Playing) && !_cts!.IsCancellationRequested)
+                await Task.Delay(50);
+
+            foreach (var p in players) { p.Stop(); p.Dispose(); }
+        }
+
+        public async Task PlaySoundEffect(string tagName)
+        {
+            var effect = Config.SoundEffects?.FirstOrDefault(e => e.TagName.Equals(tagName, StringComparison.OrdinalIgnoreCase) && e.IsEnabled);
+            if (effect == null || !File.Exists(effect.FullPath)) return;
+            try
+            {
+                using var audioFile = new AudioFileReader(effect.FullPath);
+                var deviceIds = GetActiveDeviceNumbers();
+                var players = new List<WaveOutEvent>();
+                foreach (int id in deviceIds)
+                {
+                    var waveOut = new WaveOutEvent { DeviceNumber = id };
+                    waveOut.Init(audioFile);
+                    waveOut.Volume = Config.GlobalVolume;
+                    players.Add(waveOut);
+                    waveOut.Play();
+                }
+                while (players.Any(p => p.PlaybackState == PlaybackState.Playing) && !(_cts?.IsCancellationRequested ?? false))
+                    await Task.Delay(50);
+                foreach (var p in players) { p.Stop(); p.Dispose(); }
+            }
+            catch { }
+        }
+
+        private KokoroVoice? ResolveVoice(string name)
+        {
+            var mixCfg = Config.MixedVoices?.FirstOrDefault(m => m.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && m.IsEnabled);
+            if (mixCfg != null && mixCfg.Components.Any())
+            {
+                var comps = mixCfg.Components
+                    .Select(c => (voice: KokoroVoiceManager.Voices.FirstOrDefault(v => v.Name == c.VoiceName), weight: c.Weight))
+                    .Where(x => x.voice != null).Select(x => (x.voice!, x.weight)).ToArray();
+                return comps.Any() ? KokoroVoiceManager.Mix(comps) : null;
+            }
+            return KokoroVoiceManager.Voices.FirstOrDefault(v => v.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+        #endregion
+
+        #region TTS Engine & Tag Handler
+
+        public async Task ProcessAndSpeak(string input)
+        {
+            if (Synthesizer == null || string.IsNullOrWhiteSpace(input)) return;
+
+            var allVoices = KokoroVoiceManager.Voices;
+            if (allVoices == null || !allVoices.Any()) return;
+
+            _cts = new CancellationTokenSource();
+            await _ttsSemaphore.WaitAsync();
+
+            try
+            {
+                var defaultVoiceName = Config.DefaultVoice;
+                var baseVoice = allVoices.FirstOrDefault(v => v.Name.Equals(defaultVoiceName, StringComparison.OrdinalIgnoreCase)) ?? allVoices.First();
+
+                KokoroVoice currentActiveVoice = baseVoice;
+                float currentSpeed = 1.0f;
+                float currentVolume = Config.GlobalVolume;
+                float currentPitch = 1.0f;
+                bool currentReverse = false;
+                bool currentRobot = false;
+                int currentEcho = 0;
+                Melody? currentMelody = null;
+
+                var matches = Regex.Matches(input, @"\[(?<tag>\w+)(?:(?<sep>[:+])(?<val>[\w\.-]+))?\]|(?<text>[^\[]+)");
+
+                foreach (Match m in matches)
+                {
+                    if (_cts.Token.IsCancellationRequested) break;
+                    if (m.Groups["tag"].Success)
+                    {
+                        string tagName = m.Groups["tag"].Value.ToLower();
+                        string val = m.Groups["val"].Value;
+
+                        var sfx = Config.SoundEffects.FirstOrDefault(e => e.TagName.Equals(tagName, StringComparison.OrdinalIgnoreCase));
+                        if (sfx != null && sfx.IsEnabled) { await PlaySoundEffect(tagName); continue; }
+
+                        if (tagName == "mix" || tagName == "voice")
+                        {
+                            var newVoice = ResolveVoice(val);
+                            if (newVoice != null) currentActiveVoice = newVoice;
+                        }
+                        else
+                        {
+                            HandleTag(m, ref currentActiveVoice, baseVoice, ref currentSpeed, ref currentVolume, ref currentReverse, ref currentPitch, ref currentRobot, ref currentEcho, ref currentMelody);
+                        }
+                    }
+                    else
+                    {
+                        string segment = m.Groups["text"].Value.Trim();
+                        if (string.IsNullOrEmpty(segment)) continue;
+                        byte[] wavData = Synthesizer.Synthesize(segment, currentActiveVoice, new KokoroTTSPipelineConfig { Speed = currentSpeed });
+                        if (currentRobot) wavData = ApplyRobotEffect(wavData);
+                        if (currentEcho > 0) wavData = ApplyEchoEffect(wavData, currentEcho);
+                        if (currentReverse) wavData = ReverseAudio(wavData);
+                        await PlayWavData(wavData, currentVolume, currentPitch, currentMelody);
+                    }
+                }
+            }
+            catch (Exception ex) { LogUI($"❌ Audio Error: {ex.Message}"); }
+            finally { _ttsSemaphore.Release(); }
+        }
+
+        private void HandleTag(Match m, ref KokoroVoice activeVoice, KokoroVoice baseVoice, ref float speed, ref float vol, ref bool reverse, ref float pitch, ref bool robot, ref int echo, ref Melody? melody)
+        {
+            string tagName = m.Groups["tag"].Value.ToLower();
+            string rawVal = m.Groups["val"].Value;
+            float.TryParse(rawVal, NumberStyles.Float, CultureInfo.InvariantCulture, out float numVal);
+
+            switch (tagName)
+            {
+                case "normal":
+                case "reset":
+                    activeVoice = baseVoice;
+                    speed = 1.0f; vol = Config.GlobalVolume; reverse = false; pitch = 1.0f; robot = false; echo = 0; melody = null;
+                    break;
+                case "whisper": vol = 0.2f; speed = 0.8f; break;
+                case "volume": vol = Math.Clamp((numVal > 1.1f) ? (numVal / 1000f) : numVal, 0f, 1f); break;
+                case "speed": speed = (numVal > 5) ? (numVal / 1000f) : numVal; if (speed <= 0.1f) speed = 1.0f; break;
+                case "pause":
+                    int ms = (m.Groups["sep"].Value == "+") ? (int)(numVal * 1000) : (int)numVal;
+                    if (ms > 0) Task.Delay(ms).Wait(); break;
+                case "reverse": reverse = !reverse; break;
+                case "high": pitch = (numVal > 0) ? numVal : 1.5f; break;
+                case "deep": pitch = (numVal > 0) ? numVal : 0.7f; break;
+                case "pitch": pitch = (numVal > 0) ? numVal : 1.0f; break;
+                case "robot": robot = !robot; break;
+                case "echo": echo = (numVal > 0) ? (int)numVal : 150; break;
+                case "melody":
+                    melody = string.IsNullOrEmpty(rawVal) ? null : MelodyService.Instance.Melodies.FirstOrDefault(x => x.Name.Equals(rawVal, StringComparison.OrdinalIgnoreCase) && x.IsEnabled);
+                    break;
+            }
+        }
+        #endregion
+
+        #region User Actions Logic
+
+        private async Task HandleCheer(object? s, ChannelCheerArgs e)
+        {
+            var ev = e.Payload.Event;
+            var action = Config.UserActions?.BitActions?.Where(a => a.IsEnabled && ev.Bits >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
+            if (action != null)
+            {
+                string res = action.Response.Replace("{user}", ev.UserName).Replace("{bits}", ev.Bits.ToString());
+                AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
+                await ProcessAndSpeak($"{res} {ev.Message}");
+            }
+        }
+
+        private async Task HandleSubscriptionMessage(object? s, ChannelSubscriptionMessageArgs e)
+        {
+            var ev = e.Payload.Event;
+            var streakAction = Config.UserActions?.StreakActions?.Where(a => a.IsEnabled && ev.StreakMonths >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
+            var subAction = Config.UserActions?.SubActions?.Where(a => a.IsEnabled && ev.CumulativeMonths >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
+
+            string response = "{user} subscribed for {months} months!";
+            if (streakAction != null) response = streakAction.Response;
+            else if (subAction != null) response = subAction.Response;
+
+            string finalMsg = response.Replace("{user}", ev.UserName).Replace("{months}", ev.CumulativeMonths.ToString()).Replace("{streak}", ev.StreakMonths.ToString());
+            AddToHistory(ev.UserName, "Subscription", "Sub");
+            await ProcessAndSpeak($"{finalMsg} {ev.Message.Text}");
+        }
+
+        private async Task HandleGoalProgress(object? s, ChannelGoalProgressArgs e)
+        {
+            var ev = e.Payload.Event;
+            if (ev.CurrentAmount >= ev.TargetAmount && !string.IsNullOrEmpty(Config.UserActions?.SubGoalReachedResponse))
+            {
+                string msg = Config.UserActions.SubGoalReachedResponse.Replace("{goal_title}", ev.Description);
+                await ProcessAndSpeak(msg);
+            }
+        }
+        #endregion
+
+        #region Twitch Connectivity (Auth Logic Restored)
 
         public async Task Connect()
         {
-            if (string.IsNullOrEmpty(Config.Token))
-            {
-                LogUI("⚠ Not configured: Please link your account in Settings.");
-                return;
-            }
-
+            if (string.IsNullOrEmpty(Config.Token)) return;
             try
             {
                 if (Client != null) await Disconnect();
                 Client = new EventSubWebsocketClient();
-
-                Client.WebsocketConnected += async (s, e) =>
-                {
-                    LogUI("✅ Twitch Connection Live.");
+                Client.WebsocketConnected += async (s, e) => {
                     await Subscribe("channel.chat.message", Client.SessionId);
                     await Subscribe("channel.channel_points_custom_reward_redemption.add", Client.SessionId);
+                    await Subscribe("channel.cheer", Client.SessionId);
+                    await Subscribe("channel.subscription.message", Client.SessionId);
+                    await Subscribe("channel.goal.progress", Client.SessionId);
+                    LogUI("🚀 Twitch connected.");
+                    ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
                 };
-
-                Client.ChannelChatMessage += async (s, e) =>
-                {
-                    var ev = e.Payload.Event;
-                    string msg = ev.Message.Text.Trim();
-
-                    // 1. Custom Commands Logic (High Priority)
-                    var cmd = Config.Commands?.FirstOrDefault(c => msg.StartsWith(c.Trigger, StringComparison.OrdinalIgnoreCase));
-                    if (cmd != null && cmd.IsEnabled)
-                    {
-                        // Anti-loop: don't respond to the bot itself
-                        if (ev.ChatterUserId == Config.BotUserId && !Config.TestModeActive) return;
-
-                        string response = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger);
-
-                        if (cmd.ShouldReplyInChat) await SendChatReply(response, cmd.ReplyAsBot);
-                        AddToHistory(ev.ChatterUserName, response);
-                        if (cmd.ShouldSpeak) await ProcessAndSpeak(response);
-                        return;
-                    }
-
-                    // 2. Anti-Echo for General Chat
-                    bool isSelf = ev.ChatterUserId == Config.BroadcasterId || ev.ChatterUserId == Config.BotUserId;
-                    if (isSelf && !Config.TestModeActive) return;
-
-                    // 3. General Chat Reading
-                    if (Config.ReadChatEnabled)
-                    {
-                        LogUI($"{ev.ChatterUserName}: {msg}");
-                        AddToHistory(ev.ChatterUserName, msg);
-                        await ProcessAndSpeak(msg);
-                    }
-                };
-
-                Client.ChannelPointsCustomRewardRedemptionAdd += async (s, e) =>
-                {
-                    var ev = e.Payload.Event;
-                    var redeem = Config.Redeems?.FirstOrDefault(r => r.Id == ev.Reward.Id);
-
-                    if (redeem != null && redeem.IsEnabled)
-                    {
-                        string script = string.IsNullOrEmpty(redeem.FixedText) ? "{user} redeemed {target}" : redeem.FixedText;
-                        string response = ProcessScript(script, ev.UserName, ev.UserInput);
-
-                        if (redeem.ShouldReplyInChat) await SendChatReply(response, redeem.ReplyAsBot);
-                        AddToHistory(ev.UserName, response);
-                        await ProcessAndSpeak(response);
-                    }
-                };
-
+                Client.ChannelChatMessage += HandleChatMessage;
+                Client.ChannelPointsCustomRewardRedemptionAdd += HandleRewardRedemption;
+                Client.ChannelCheer += HandleCheer;
+                Client.ChannelSubscriptionMessage += HandleSubscriptionMessage;
+                Client.ChannelGoalProgress += HandleGoalProgress;
                 await Client.ConnectAsync();
             }
-            catch (Exception ex) { LogUI($"❌ Connection Error: {ex.Message}"); }
+            catch { }
         }
 
         public async Task Disconnect()
@@ -141,254 +411,150 @@ namespace JakeyTTS
                 StopCurrentTTS();
                 await Client.DisconnectAsync();
                 Client = null;
-                LogUI("🛑 Service Stopped.");
+                LogUI("🛑 Service stopped.");
+                ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        private async Task Subscribe(string type, string sessionId)
+        private async Task HandleChatMessage(object? s, ChannelChatMessageArgs e)
         {
-            _http.DefaultRequestHeaders.Clear();
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Config.Token);
-            _http.DefaultRequestHeaders.Add("Client-Id", ClientId);
-
-            // Chat Message v1 requires user_id
-            object condition = (type == "channel.chat.message")
-                ? new { broadcaster_user_id = Config.BroadcasterId, user_id = Config.BroadcasterId }
-                : new { broadcaster_user_id = Config.BroadcasterId };
-
-            var body = new { type, version = "1", condition, transport = new { method = "websocket", session_id = sessionId } };
-            var resp = await _http.PostAsJsonAsync("https://api.twitch.tv/helix/eventsub/subscriptions", body);
-
-            if (!resp.IsSuccessStatusCode)
+            var ev = e.Payload.Event;
+            string msg = ev.Message.Text.Trim();
+            var cmd = Config.Commands?.FirstOrDefault(c => msg.StartsWith(c.Trigger, StringComparison.OrdinalIgnoreCase));
+            if (cmd != null && cmd.IsEnabled)
             {
-                string err = await resp.Content.ReadAsStringAsync();
-                LogUI($"❌ Subscription failed ({type}): {err}");
+                string res = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger);
+                if (cmd.ShouldReplyInChat) await SendChatReply(res, cmd.ReplyAsBot);
+                AddToHistory(ev.ChatterUserName, res, "Command");
+                if (cmd.ShouldSpeak) await ProcessAndSpeak(res);
+            }
+            else if (Config.ReadChatEnabled)
+            {
+                if (ev.ChatterUserId == Config.BroadcasterId && !Config.TestModeActive) return;
+                AddToHistory(ev.ChatterUserName, msg, "Chat");
+                await ProcessAndSpeak(msg);
             }
         }
 
-        #endregion
-
-        #region Chat & Cleanup
-
-        private async Task SendChatReply(string message, bool asBot)
+        private async Task HandleRewardRedemption(object? sender, ChannelPointsCustomRewardRedemptionArgs e)
         {
-            if (Config.TestModeActive) return;
-
-            try
+            var ev = e.Payload.Event;
+            var redeemConfig = Config.Redeems?.FirstOrDefault(r => r.Id == ev.Reward.Id);
+            if (redeemConfig != null && redeemConfig.IsEnabled)
             {
-                // HIDE [] PARAMS: Strip [tags] unless they are wrapped in "" quotes
-                string cleanMsg = Regex.Replace(message, @"(?<!"")\[.*?\](?!"")", "").Trim();
-                cleanMsg = Regex.Replace(cleanMsg, @"\s+", " ");
-
-                if (string.IsNullOrWhiteSpace(cleanMsg)) return;
-
-                bool useBot = asBot && Config.IsBotConnected && !string.IsNullOrEmpty(Config.BotToken);
-                string token = useBot ? Config.BotToken : Config.Token;
-                string senderId = useBot ? Config.BotUserId : Config.BroadcasterId;
-
-                _http.DefaultRequestHeaders.Clear();
-                _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                _http.DefaultRequestHeaders.Add("Client-Id", ClientId);
-
-                var body = new { broadcaster_id = Config.BroadcasterId, sender_id = senderId, message = cleanMsg };
-                var response = await _http.PostAsJsonAsync("https://api.twitch.tv/helix/chat/messages", body);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    string error = await response.Content.ReadAsStringAsync();
-                    LogUI($"❌ Chat API Error: {error}");
-                }
-            }
-            catch (Exception ex) { LogUI($"❌ Chat System Exception: {ex.Message}"); }
-        }
-
-        #endregion
-
-        #region TTS Engine & Audio Control
-
-        public async Task ProcessAndSpeak(string input)
-        {
-            if (TTS == null || string.IsNullOrWhiteSpace(input)) return;
-
-            _cts = new CancellationTokenSource();
-
-            await _ttsSemaphore.WaitAsync();
-            try
-            {
-                var voice = KokoroVoiceManager.GetVoice(Config.DefaultVoice ?? "af_bella");
-                var matches = Regex.Matches(input, @"\[(?<tag>\w+):\s*(?<val>[\d\.]+)\]|(?<text>[^\[]+)");
-                float currentSpeed = 1.0f;
-
-                foreach (Match m in matches)
-                {
-                    if (_cts.Token.IsCancellationRequested) break;
-
-                    if (m.Groups["tag"].Success)
-                    {
-                        string tagName = m.Groups["tag"].Value.ToLower();
-                        if (tagName == "pause" && int.TryParse(m.Groups["val"].Value, out int ms))
-                            await Task.Delay(ms, _cts.Token);
-                        else if (tagName == "speed" && float.TryParse(m.Groups["val"].Value, out float s))
-                            currentSpeed = s;
-                    }
-                    else
-                    {
-                        string segment = m.Groups["text"].Value.Trim();
-                        if (string.IsNullOrEmpty(segment)) continue;
-
-                        var tcs = new TaskCompletionSource<bool>();
-                        var handle = TTS.SpeakFast(segment, voice, new KokoroTTSPipelineConfig { Speed = currentSpeed });
-
-                        using (_cts.Token.Register(() => tcs.TrySetCanceled()))
-                        {
-                            handle.OnSpeechCompleted += (p) => tcs.TrySetResult(true);
-                            await tcs.Task;
-                        }
-                    }
-                }
-            }
-            catch (OperationCanceledException) { /* Controlled Stop */ }
-            catch (Exception ex) { LogUI($"❌ Audio Error: {ex.Message}"); }
-            finally { _ttsSemaphore.Release(); }
-        }
-
-        public void StopCurrentTTS()
-        {
-            if (_cts != null && !_cts.IsCancellationRequested)
-            {
-                _cts.Cancel();
-                try { _ttsSemaphore.Release(); } catch { }
-                _ttsSemaphore = new SemaphoreSlim(1, 1);
-                LogUI("🛑 Audio cancelled.");
+                string msg = ev.UserInput ?? "";
+                if (!string.IsNullOrWhiteSpace(msg)) { AddToHistory(ev.UserName, msg, "Reward"); await ProcessAndSpeak(msg); }
             }
         }
-
-        #endregion
-
-        #region Scripts, History & API
 
         public string ProcessScript(string script, string sender, string fullMessage, string trigger = "")
         {
             if (string.IsNullOrEmpty(script)) return fullMessage;
             string res = script.Replace("{user}", sender, StringComparison.OrdinalIgnoreCase);
-
-            if (!string.IsNullOrEmpty(trigger) && fullMessage.StartsWith(trigger, StringComparison.OrdinalIgnoreCase))
-            {
-                var cleanInput = fullMessage.Substring(trigger.Length).Trim();
-                var parts = cleanInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    res = res.Replace($"{{{i + 1}}}", parts[i]);
-                    if (i == 0) res = res.Replace("{target}", parts[i]);
-                }
-            }
-            res = res.Replace("{target}", "someone", StringComparison.OrdinalIgnoreCase);
-
-            res = Regex.Replace(res, @"\{random:(\d+)-(\d+)\}", m =>
-                _rng.Next(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value) + 1).ToString());
-
-            res = Regex.Replace(res, @"\[choose:(.*?)\]", m => {
-                var options = m.Groups[1].Value.Split('|');
-                return options[_rng.Next(options.Length)].Trim();
-            }, RegexOptions.Singleline);
-
+            res = Regex.Replace(res, @"\{random:(\d+)-(\d+)\}", m => _rng.Next(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value) + 1).ToString());
             return res;
         }
 
-        private void AddToHistory(string user, string message)
+        private async Task Subscribe(string type, string sessionId)
         {
-            MainWindow.Instance?.DispatcherQueue.TryEnqueue(() =>
-            {
-                History.Insert(0, new TtsEntry(user, message, DateTime.Now.ToString("HH:mm:ss")));
-                if (History.Count > 100) History.RemoveAt(100);
-            });
+            PrepareHttp(Config.Token);
+            object condition = (type == "channel.chat.message") ? new { broadcaster_user_id = Config.BroadcasterId, user_id = Config.BroadcasterId } : new { broadcaster_user_id = Config.BroadcasterId };
+            var body = new { type, version = "1", condition, transport = new { method = "websocket", session_id = sessionId } };
+            await _http.PostAsJsonAsync("https://api.twitch.tv/helix/eventsub/subscriptions", body);
         }
 
-        public async Task<List<RedeemItem>> GetCustomRewards()
+        private void PrepareHttp(string token)
+        {
+            _http.DefaultRequestHeaders.Clear();
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            _http.DefaultRequestHeaders.Add("Client-Id", ClientId);
+        }
+
+        private async Task SendChatReply(string message, bool asBot)
+        {
+            if (Config.TestModeActive) return;
+            string cln = Regex.Replace(message, @"(?<!"")\[.*?\](?!"")", "").Trim();
+            if (string.IsNullOrWhiteSpace(cln)) return;
+            PrepareHttp(asBot ? Config.BotToken : Config.Token);
+            await _http.PostAsJsonAsync("https://api.twitch.tv/helix/chat/messages", new { broadcaster_id = Config.BroadcasterId, sender_id = (asBot ? Config.BotUserId : Config.BroadcasterId), message = cln });
+        }
+
+        public async Task<List<RedeemItem>?> GetCustomRewards()
         {
             if (string.IsNullOrEmpty(Config.Token)) return null;
             try
             {
-                _http.DefaultRequestHeaders.Clear();
-                _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Config.Token);
-                _http.DefaultRequestHeaders.Add("Client-Id", ClientId);
-
+                PrepareHttp(Config.Token);
                 var url = $"https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={Config.BroadcasterId}";
                 var resp = await _http.GetFromJsonAsync<JsonElement>(url);
                 var list = new List<RedeemItem>();
-
-                foreach (var item in resp.GetProperty("data").EnumerateArray())
-                {
-                    list.Add(new RedeemItem
-                    {
-                        Id = item.GetProperty("id").GetString(),
-                        Name = item.GetProperty("title").GetString(),
-                        IsEnabled = true,
-                        FixedText = "{user} redeemed {target}"
-                    });
-                }
+                if (resp.TryGetProperty("data", out var data))
+                    foreach (var item in data.EnumerateArray())
+                        list.Add(new RedeemItem { Id = item.GetProperty("id").GetString() ?? "", Name = item.GetProperty("title").GetString() ?? "Unknown", IsEnabled = true });
                 return list;
             }
             catch { return null; }
         }
 
-        public async Task PerformAuth(bool isBot)
+        public async Task PerformAuth(bool bot)
         {
-            string scope = isBot ? "user:write:chat" : "user:read:chat+channel:read:redemptions+user:write:chat";
-            string authUrl = $"https://id.twitch.tv/oauth2/authorize?client_id={ClientId}&redirect_uri={RedirectUri}&response_type=token&scope={scope}&force_verify=true";
-
-            Process.Start(new ProcessStartInfo(authUrl) { UseShellExecute = true });
-
-            using var listener = new HttpListener();
-            listener.Prefixes.Add(RedirectUri);
-            listener.Start();
-
-            var context = await listener.GetContextAsync();
-            string respBody = "<html><body style='font-family:sans-serif;text-align:center;padding-top:50px;'><h1>Linked!</h1><p>You can close this tab.</p><script>fetch('/token?access_token=' + new URLSearchParams(window.location.hash.substring(1)).get('access_token'))</script></body></html>";
-            byte[] buf = System.Text.Encoding.UTF8.GetBytes(respBody);
-            context.Response.OutputStream.Write(buf, 0, buf.Length);
-            context.Response.Close();
-
-            var tokenContext = await listener.GetContextAsync();
-            string token = tokenContext.Request.QueryString["access_token"];
-            tokenContext.Response.Close();
-            listener.Stop();
-
-            if (!string.IsNullOrEmpty(token))
-            {
-                await FetchTwitchUser(token, isBot);
-                Config.Save();
-            }
+            string scp = bot ? "user:write:chat" : "user:read:chat+channel:read:redemptions+user:write:chat";
+            string url = $"https://id.twitch.tv/oauth2/authorize?client_id={ClientId}&redirect_uri={RedirectUri}&response_type=token&scope={scp}&force_verify=true";
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            using var lsn = new HttpListener(); lsn.Prefixes.Add(RedirectUri); lsn.Start();
+            var ctx = await lsn.GetContextAsync();
+            byte[] buf = System.Text.Encoding.UTF8.GetBytes("<html><body><h1>Linked!</h1><script>fetch('/token?access_token=' + new URLSearchParams(window.location.hash.substring(1)).get('access_token'))</script></body></html>");
+            ctx.Response.OutputStream.Write(buf, 0, buf.Length); ctx.Response.Close();
+            var tctx = await lsn.GetContextAsync();
+            string? t = tctx.Request.QueryString["access_token"]; tctx.Response.Close(); lsn.Stop();
+            if (!string.IsNullOrEmpty(t)) { await FetchTwitchUser(t, bot); Config.Save(); }
         }
 
         private async Task FetchTwitchUser(string token, bool isBot)
         {
-            _http.DefaultRequestHeaders.Clear();
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            _http.DefaultRequestHeaders.Add("Client-Id", ClientId);
-
-            var userJson = await _http.GetStringAsync("https://api.twitch.tv/helix/users");
-            using var doc = JsonDocument.Parse(userJson);
-            var userData = doc.RootElement.GetProperty("data")[0];
-
-            if (isBot)
-            {
-                Config.BotToken = token;
-                Config.BotUserId = userData.GetProperty("id").GetString();
-                Config.IsBotConnected = true;
-                LogUI("🤖 Bot Connected.");
-            }
-            else
-            {
-                Config.Token = token;
-                Config.BroadcasterId = userData.GetProperty("id").GetString();
-                Config.UserName = userData.GetProperty("display_name").GetString();
-                LogUI($"💜 Broadcaster Linked: {Config.UserName}");
-            }
+            PrepareHttp(token);
+            var res = await _http.GetStringAsync("https://api.twitch.tv/helix/users");
+            using var doc = JsonDocument.Parse(res);
+            var data = doc.RootElement.GetProperty("data")[0];
+            if (isBot) { Config.BotToken = token; Config.BotUserId = data.GetProperty("id").GetString(); Config.IsBotConnected = true; }
+            else { Config.Token = token; Config.BroadcasterId = data.GetProperty("id").GetString(); Config.UserName = data.GetProperty("display_name").GetString(); }
         }
 
+        public void StopCurrentTTS() => _cts?.Cancel();
+        private void LogUI(string m) => MainWindow.Instance?.Log(m);
+        private void AddToHistory(string u, string m, string source) =>
+            MainWindow.Instance?.DispatcherQueue?.TryEnqueue(() => {
+                History.Insert(0, new TtsEntry(u, m, DateTime.Now.ToString("HH:mm:ss"), source));
+                if (History.Count > 100) History.RemoveAt(100);
+            });
         #endregion
 
-        private void LogUI(string msg) => MainWindow.Instance?.Log(msg);
+        private class MelodyWaveProvider : IWaveProvider
+        {
+            private readonly byte[] _sourceData;
+            private readonly WaveFormat _format;
+            private readonly Melody _melody;
+            private double _sourcePosition = 0;
+            public MelodyWaveProvider(byte[] data, WaveFormat format, Melody melody) { _sourceData = data; _format = format; _melody = melody; }
+            public WaveFormat WaveFormat => _format;
+            public int Read(byte[] buffer, int offset, int count)
+            {
+                int sampleCount = count / 2; int bytesRead = 0; int sourceSamples = _sourceData.Length / 2;
+                for (int i = 0; i < sampleCount; i++)
+                {
+                    if (_sourcePosition >= sourceSamples - 2) break;
+                    float progress = (float)(_sourcePosition / sourceSamples);
+                    float pitchMultiplier = MelodyService.Instance.GetPitchAt(_melody, progress);
+                    int index = (int)_sourcePosition; float frac = (float)(_sourcePosition - index);
+                    short s1 = BitConverter.ToInt16(_sourceData, index * 2);
+                    short s2 = BitConverter.ToInt16(_sourceData, (index + 1) * 2);
+                    short sample = (short)(s1 + frac * (s2 - s1));
+                    byte[] bytes = BitConverter.GetBytes(sample);
+                    buffer[offset + bytesRead] = bytes[0]; buffer[offset + bytesRead + 1] = bytes[1];
+                    _sourcePosition += pitchMultiplier; bytesRead += 2;
+                }
+                return bytesRead;
+            }
+        }
     }
 }

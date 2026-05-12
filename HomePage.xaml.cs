@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using System;
 
 namespace JakeyTTS
 {
@@ -8,14 +9,23 @@ namespace JakeyTTS
     {
         private readonly TwitchService _service = TwitchService.Instance;
 
-        public HomePage()
-        {
-            this.InitializeComponent();
-        }
+        public HomePage() { this.InitializeComponent(); }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
+            _service.ConnectionStateChanged += OnServiceChanged;
             UpdateUIState();
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            _service.ConnectionStateChanged -= OnServiceChanged;
+        }
+
+        private void OnServiceChanged(object? sender, EventArgs e)
+        {
+            // Sync with UI thread
+            this.DispatcherQueue.TryEnqueue(() => UpdateUIState());
         }
 
         private void UpdateUIState()
@@ -23,34 +33,17 @@ namespace JakeyTTS
             bool isConfigured = !string.IsNullOrEmpty(_service.Config.Token);
             bool isRunning = _service.IsConnected;
 
-            // Reset visibilities
-            ConfigureBtn.Visibility = Visibility.Collapsed;
-            StartBtn.Visibility = Visibility.Collapsed;
-            StopBtn.Visibility = Visibility.Collapsed;
-
-            if (!isConfigured)
-            {
-                ConfigureBtn.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                if (isRunning) StopBtn.Visibility = Visibility.Visible;
-                else StartBtn.Visibility = Visibility.Visible;
-            }
-        }
-
-        private void ConfigureBtn_Click(object sender, RoutedEventArgs e)
-        {
-            // Navigate to the new settings page
-            this.Frame.Navigate(typeof(TTSConfigPage));
+            ConfigureBtn.Visibility = isConfigured ? Visibility.Collapsed : Visibility.Visible;
+            StartBtn.Visibility = (!isRunning && isConfigured) ? Visibility.Visible : Visibility.Collapsed;
+            StopBtn.Visibility = (isRunning && isConfigured) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async void ServiceToggle_Click(object sender, RoutedEventArgs e)
         {
             if (_service.IsConnected) await _service.Disconnect();
             else await _service.Connect();
-
-            UpdateUIState();
         }
+
+        private void ConfigureBtn_Click(object sender, RoutedEventArgs e) => this.Frame.Navigate(typeof(TTSConfigPage));
     }
 }

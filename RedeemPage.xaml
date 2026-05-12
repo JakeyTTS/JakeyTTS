@@ -2,50 +2,166 @@
     x:Class="JakeyTTS.RedeemPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls">
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:WinUI.TableView"
+    mc:Ignorable="d">
 
     <Grid Margin="40">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="340"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- Scripting Info Panel (Same tags work here!) -->
-        <Expander Grid.Row="1" Header="Redemption Scripting Guide" HorizontalAlignment="Stretch" Margin="0,0,0,20">
-            <StackPanel Padding="16" Spacing="4">
-                <TextBlock Text="If 'TTS Response' is empty, it will read the user's message." FontSize="12" FontStyle="Italic" Margin="0,0,0,8"/>
-                <TextBlock Text="• {user} - The person who redeemed" FontSize="12"/>
-                <TextBlock Text="• {target} - The text the user typed into the reward" FontSize="12"/>
-                <TextBlock Text="• [speed: 0.5] - Slow down the reward voice" FontSize="12" Foreground="SkyBlue"/>
+        <Grid Grid.Column="0" Margin="0,0,20,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+
+                <controls:TableView x:Name="RedeemsTable" 
+                                   AutoGenerateColumns="False"
+                                   SelectionMode="Single">
+                    <controls:TableView.Columns>
+                        <controls:TableViewCheckBoxColumn Header="On" Binding="{Binding IsEnabled}" Width="60"/>
+                        <controls:TableViewTextColumn Header="Reward Name" Binding="{Binding Name}" Width="180"/>
+                        <controls:TableViewTextColumn Header="TTS Response" Binding="{Binding FixedText}" Width="Auto" MinWidth="350"/>
+                        <controls:TableViewCheckBoxColumn Header="Chat" Binding="{Binding ShouldReplyInChat}" Width="80"/>
+                        <controls:TableViewCheckBoxColumn Header="Bot" Binding="{Binding ReplyAsBot}" Width="80"/>
+                    </controls:TableView.Columns>
+                </controls:TableView>
+            </Border>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,20,0,0">
+                <Button Click="Sync_Click" Padding="16,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <SymbolIcon Symbol="Refresh"/>
+                        <TextBlock Text="Sync from Twitch"/>
+                    </StackPanel>
+                </Button>
+                <Button Content="Save All Changes" Click="Save_Click" Style="{StaticResource AccentButtonStyle}" Padding="16,8" Width="160"/>
             </StackPanel>
-        </Expander>
+        </Grid>
 
-        <Border Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-            <controls:DataGrid x:Name="RedeemsGrid" 
-                               AutoGenerateColumns="False" 
-                               SelectionMode="Single"
-                               RowHeight="48">
-                <controls:DataGrid.Columns>
-                    <controls:DataGridCheckBoxColumn Header="On" Binding="{Binding IsEnabled, Mode=TwoWay}" Width="50"/>
-                    <controls:DataGridTextColumn Header="Twitch Reward Name" Binding="{Binding Name}" IsReadOnly="True" Width="200"/>
-                    <controls:DataGridTextColumn Header="Custom TTS Response" Binding="{Binding FixedText, Mode=TwoWay}" Width="*"/>
-                    <controls:DataGridCheckBoxColumn Header="Chat" Binding="{Binding ShouldReplyInChat, Mode=TwoWay}" Width="65"/>
-                    <controls:DataGridCheckBoxColumn Header="Bot" Binding="{Binding ReplyAsBot, Mode=TwoWay}" Width="65"/>
-                </controls:DataGrid.Columns>
-            </controls:DataGrid>
-        </Border>
+        <!-- SIDEBAR GUIDE (RIGHT) -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="15">
+                <TextBlock Text="Tag &amp; Scripting Guide" 
+                   FontWeight="Bold" 
+                   FontSize="20" 
+                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" 
+                   Margin="0,0,0,10"
+                   HorizontalAlignment="Left"/>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12" Margin="0,20,0,0">
-            <Button Click="Sync_Click" Padding="16,8">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <SymbolIcon Symbol="Refresh"/>
-                    <TextBlock Text="Sync from Twitch"/>
-                </StackPanel>
-            </Button>
-            <Button Content="Save All" Click="Save_Click" Style="{StaticResource AccentButtonStyle}" Padding="16,8" Width="120"/>
-        </StackPanel>
+                <!-- 1. DYNAMIC SCRIPTING -->
+                <Expander Header="Dynamic Scripting" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left"
+                  IsExpanded="True">
+                    <StackPanel Spacing="12" Padding="4">
+                        <TextBlock Text="USER &amp; ARGUMENTS" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{user} / {target}" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Sender and first word." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{1}, {2}, {3}..." FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Words from message." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="RANDOMIZERS" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,10,0,0"/>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{random:X-Y}" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: {random:1-100}" FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[choose: A | B]" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: [choose: Yes | No]" FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 2. VOICE & PITCH -->
+                <Expander Header="Voice &amp; Pitch" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="12" Padding="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[high+1.5] / [deep+0.7]" FontWeight="Bold" FontSize="15" Foreground="Orchid"/>
+                            <TextBlock Text="Multiplier (x). Higher = Squeakier." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[whisper]" FontWeight="Bold" FontSize="15" Foreground="Plum"/>
+                            <TextBlock Text="Soft breathy voice style." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[volume+0.5]" FontWeight="Bold" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Multiplier (x). Range: 0.0 to 1.0" FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 3. AUDIO EFFECTS -->
+                <Expander Header="Audio Effects" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="12" Padding="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[robot]" FontWeight="Bold" FontSize="15" Foreground="IndianRed"/>
+                            <TextBlock Text="Metallic ring-modulation." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[echo:300]" FontWeight="Bold" FontSize="15" Foreground="LightCoral"/>
+                            <TextBlock Text="Delay in Milliseconds (ms)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: [echo:500] for long trails." FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[reverse]" FontWeight="Bold" FontSize="15" Foreground="Salmon"/>
+                            <TextBlock Text="Plays the processed audio backward." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 4. TIMING & SYSTEM -->
+                <Expander Header="Timing &amp; Speed" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="12" Padding="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[speed+1.2]" FontWeight="Bold" FontSize="15" Foreground="MediumSeaGreen"/>
+                            <TextBlock Text="Speed Multiplier (x)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: [speed+2.0] is very fast." FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[pause+1.5]" FontWeight="Bold" FontSize="15" Foreground="DodgerBlue"/>
+                            <TextBlock Text="Wait in Seconds (s)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[pause:500]" FontWeight="Bold" FontSize="15" Foreground="SteelBlue"/>
+                            <TextBlock Text="Wait in Milliseconds (ms)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[normal] or [reset]" FontWeight="Bold" FontSize="15" Foreground="DarkOrange"/>
+                            <TextBlock Text="Removes all active tags." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>

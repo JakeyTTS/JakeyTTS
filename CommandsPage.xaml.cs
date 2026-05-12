@@ -7,15 +7,16 @@ namespace JakeyTTS
 {
     public sealed partial class CommandsPage : Page
     {
-        private readonly TwitchService _service = TwitchService.Instance;
+        public TwitchService ViewModel => TwitchService.Instance;
         public ObservableCollection<CommandItem> CommandList { get; set; }
 
         public CommandsPage()
         {
             this.InitializeComponent();
-            var existing = _service.Config.Commands ?? new System.Collections.Generic.List<CommandItem>();
+            var existing = ViewModel.Config.Commands ?? new System.Collections.Generic.List<CommandItem>();
             CommandList = new ObservableCollection<CommandItem>(existing);
-            CommandsGrid.ItemsSource = CommandList;
+
+            CommandsTable.ItemsSource = CommandList;
         }
 
         private void Add_Click(object sender, RoutedEventArgs e)
@@ -25,7 +26,7 @@ namespace JakeyTTS
 
         private void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (CommandsGrid.SelectedItem is CommandItem selected)
+            if (CommandsTable.SelectedItem is CommandItem selected)
             {
                 CommandList.Remove(selected);
             }
@@ -33,8 +34,11 @@ namespace JakeyTTS
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            _service.Config.Commands = CommandList.ToList();
-            _service.Config.Save();
+            SaveAllButton.Focus(FocusState.Programmatic);
+            ViewModel.Config.Commands = CommandList.ToList();
+
+            ViewModel.Config.Save();
+
             MainWindow.Instance?.Log("💾 Commands saved successfully.");
         }
     }

@@ -8,40 +8,59 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="44"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="150"/>
+            <RowDefinition x:Name="LogRow" Height="150"/>
         </Grid.RowDefinitions>
 
-        <!-- Removed Header="Jakey TTS" -->
+        <!-- CUSTOM TITLE BAR -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" VerticalAlignment="Stretch">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Image Source="ms-appx:///app.ico" Width="20" Height="20" Margin="0,0,12,0" Stretch="Uniform"/>
+                <TextBlock Text="JakeyTTS" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}"
+                           FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- NAVIGATION -->
         <NavigationView x:Name="NavView" 
-                        Grid.Row="0"
+                        Grid.Row="1"
                         PaneDisplayMode="Left"
                         IsSettingsVisible="True"
+                        IsBackButtonVisible="Collapsed" 
                         ItemInvoked="NavView_ItemInvoked">
 
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Home" Tag="Home" Icon="Home"/>
                 <NavigationViewItem Content="TTS Settings" Tag="TTSConfig" Icon="People"/>
+                <NavigationViewItem Content="User Actions" Tag="UserActions" Icon="Contact2"/>
                 <NavigationViewItem Content="History" Tag="History" Icon="Clock"/>
                 <NavigationViewItem Content="Commands" Tag="Commands" Icon="Go"/>
-                <NavigationViewItem Content="Rewards" Tag="Rewards" Icon="OutlineStar"/>
+                <NavigationViewItem Content="Redeems" Tag="Rewards" Icon="OutlineStar"/>
+
+                <NavigationViewItem Content="Melodies" Tag="Melodies" Icon="MusicInfo"/>
+                <NavigationViewItem Content="Sound Effects" Tag="SFX" Icon="Audio"/>
+
+                <NavigationViewItem Content="Mixed Voices" Tag="MixedVoices" Icon="Volume"/>
+                <NavigationViewItemSeparator/>
+                <NavigationViewItem Content="Keybinds" Tag="Keybinds" Icon="Keyboard"/>
             </NavigationView.MenuItems>
 
-            <Frame x:Name="ContentFrame" Margin="24,0,24,24"/>
+            <NavigationView.PaneFooter>
+                <NavigationViewItem x:Name="LogToggleBtn" Content="Hide Log" Icon="List" 
+                                    SelectsOnInvoked="False" Tapped="LogToggle_Tapped"/>
+            </NavigationView.PaneFooter>
+
+            <Frame x:Name="ContentFrame" Margin="24,0,24,0"/>
         </NavigationView>
 
-        <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+        <!-- LOG CONSOLE -->
+        <Border x:Name="LogBorder" Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
             <Grid Padding="12">
                 <ScrollViewer x:Name="LogScroll">
-                    <TextBox x:Name="LogBlock" 
-                             IsReadOnly="True" 
-                             TextWrapping="Wrap" 
-                             AcceptsReturn="True"
-                             Background="Transparent" 
-                             BorderThickness="0"
-                             FontSize="12"
-                             FontFamily="Cascadia Code, Consolas"/>
+                    <TextBox x:Name="LogBlock" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                             Background="Transparent" BorderThickness="0" FontSize="12" FontFamily="Cascadia Code, Consolas"/>
                 </ScrollViewer>
             </Grid>
         </Border>

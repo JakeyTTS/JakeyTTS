@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="JakeyTTS.UserActions.UserActionsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:JakeyTTS.UserActions"
+    xmlns:models="using:JakeyTTS"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Margin="40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER-->
+        <Grid Grid.Row="0" Margin="0,0,0,25">
+            <TextBlock Text="User Event Actions" 
+                       Style="{StaticResource TitleTextBlockStyle}" 
+                       FontWeight="Bold" 
+                       VerticalAlignment="Center"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15">
+                <TextBlock Text="Changes apply to next event" 
+                           VerticalAlignment="Center" 
+                           Opacity="0.5" 
+                           FontStyle="Italic" 
+                           FontSize="12"/>
+                <Button x:Name="SaveBtn"
+                        Content="Save All Actions" 
+                        Click="Save_Click" 
+                        Style="{StaticResource AccentButtonStyle}" 
+                        Width="180" Height="40"/>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="30" Padding="0,0,15,0">
+
+                <!-- BITS SECTION -->
+                <Expander Header="Bits (Cheer) Settings" HorizontalAlignment="Stretch" IsExpanded="True">
+                    <StackPanel Spacing="10" Padding="15">
+                        <TextBlock Text="Trigger TTS based on bit amount thresholds" Opacity="0.6" FontSize="12"/>
+
+                        <ItemsControl ItemsSource="{Binding Config.UserActions.BitActions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:UserActionItem">
+                                    <Grid ColumnSpacing="15" Margin="0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="130"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <NumberBox Header="Min Bits" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
+
+                                        <TextBox Grid.Column="1" 
+                                                 Header="{}{Response (Use {user}, {bits})}" 
+                                                 Text="{Binding Response, Mode=TwoWay}" 
+                                                 PlaceholderText="{}{Thanks {user} for the {bits} bits!}"/>
+
+                                        <Button Grid.Column="2" VerticalAlignment="Bottom" Click="DeleteBitAction_Click" Background="Transparent">
+                                            <SymbolIcon Symbol="Delete" Foreground="Red"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Click="AddBitAction_Click" Margin="0,10,0,0">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <SymbolIcon Symbol="Add"/>
+                                <TextBlock Text="Add Bit Threshold"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Expander>
+
+                <!-- SUBS & STREAKS SECTION -->
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- SUBSCRIPTION MONTHS -->
+                    <Expander Header="Subscription Months" HorizontalAlignment="Stretch" IsExpanded="True">
+                        <StackPanel Spacing="10" Padding="15">
+                            <TextBlock Text="TTS based on total months subscribed" Opacity="0.6" FontSize="12"/>
+                            <ItemsControl ItemsSource="{Binding Config.UserActions.SubActions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:UserActionItem">
+                                        <Grid ColumnSpacing="10" Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <NumberBox Header="Months" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
+                                            <TextBox Grid.Column="1" 
+                                                     Header="{}{Response ({user}, {months})}" 
+                                                     Text="{Binding Response, Mode=TwoWay}" 
+                                                     PlaceholderText="{}{user} has been subbed for {months} months!"/>
+                                            <Button Grid.Column="2" VerticalAlignment="Bottom" Click="DeleteSubAction_Click" Background="Transparent">
+                                                <SymbolIcon Symbol="Delete" Foreground="Red"/>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Content="Add Sub Threshold" Click="AddSubAction_Click" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Expander>
+
+                    <!-- STREAM STREAKS -->
+                    <Expander Grid.Column="1" Header="Stream Streaks" HorizontalAlignment="Stretch" IsExpanded="True">
+                        <StackPanel Spacing="10" Padding="15">
+                            <TextBlock Text="TTS based on consecutive streams" Opacity="0.6" FontSize="12"/>
+                            <ItemsControl ItemsSource="{Binding Config.UserActions.StreakActions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:UserActionItem">
+                                        <Grid ColumnSpacing="10" Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <NumberBox Header="Streams" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
+                                            <TextBox Grid.Column="1" 
+                                                     Header="{}{Response ({user}, {streams})}" 
+                                                     Text="{Binding Response, Mode=TwoWay}" 
+                                                     PlaceholderText="{}{user} is on a {streams} stream streak!"/>
+                                            <Button Grid.Column="2" VerticalAlignment="Bottom" Click="DeleteStreakAction_Click" Background="Transparent">
+                                                <SymbolIcon Symbol="Delete" Foreground="Red"/>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Content="Add Streak Threshold" Click="AddStreakAction_Click" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Expander>
+                </Grid>
+
+                <!-- GOALS SECTION -->
+                <Expander Header="Subscription Goals" HorizontalAlignment="Stretch">
+                    <StackPanel Spacing="15" Padding="15">
+                        <TextBlock Text="Configure a message to play automatically when a Twitch Sub Goal is completed." Opacity="0.6" FontSize="12"/>
+                        <TextBox Header="{}{Goal Reached Message (Use {goal_title})}" 
+                                 PlaceholderText="{}{We did it! {goal_title} reached!}"
+                                 Text="{Binding Config.UserActions.SubGoalReachedResponse, Mode=TwoWay}"/>
+                    </StackPanel>
+                </Expander>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

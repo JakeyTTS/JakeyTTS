@@ -6,67 +6,226 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer>
-        <StackPanel Spacing="24" Margin="40" MaxWidth="600" HorizontalAlignment="Left">
+    <Grid Margin="40,40,15,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="360"/>
+        </Grid.ColumnDefinitions>
 
-            <!-- Service Control -->
-            <StackPanel Spacing="12">
-                <TextBlock Text="Service Control" Style="{StaticResource TitleTextBlockStyle}"/>
-                <Button x:Name="ConnectBtn" Click="Connect_Click" Style="{StaticResource AccentButtonStyle}" Padding="16,8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <SymbolIcon x:Name="ConnectIcon" Symbol="Play"/>
-                        <TextBlock x:Name="ConnectText" Text="Connect &amp; Start Service"/>
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="30" Margin="0,0,20,0" Padding="0,0,0,50">
+
+                <VariableSizedWrapGrid Orientation="Horizontal" 
+                                       HorizontalAlignment="Stretch" 
+                                       VerticalAlignment="Top"
+                                       ItemWidth="440" 
+                                       MaximumRowsOrColumns="2">
+
+                    <!-- COLUMNA 1: VOICE & OUTPUT -->
+                    <StackPanel Spacing="15" Margin="0,0,20,20" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <SymbolIcon Symbol="Volume"/>
+                            <TextBlock Text="Voice &amp; Output" FontSize="18" FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1" CornerRadius="8" Padding="20">
+                            <StackPanel Spacing="15">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="Master Volume" FontSize="14" FontWeight="Medium"/>
+                                    <Slider x:Name="VolumeSlider" Minimum="0" Maximum="1" StepFrequency="0.05" 
+                                            ValueChanged="VolumeSlider_ValueChanged" HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+                                <ComboBox x:Name="AudioDeviceCombo" Header="Primary Output (Stream)" HorizontalAlignment="Stretch" SelectionChanged="AudioDeviceCombo_SelectionChanged"/>
+                                <ComboBox x:Name="AudioDeviceCombo2" Header="Secondary Output (Monitor)" HorizontalAlignment="Stretch" SelectionChanged="AudioDeviceCombo2_SelectionChanged"/>
+                                <ComboBox x:Name="AudioDeviceCombo3" Header="Tertiary Output (Optional)" HorizontalAlignment="Stretch" SelectionChanged="AudioDeviceCombo3_SelectionChanged"/>
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="LanguageCombo" Header="Language" HorizontalAlignment="Stretch" SelectionChanged="LanguageCombo_SelectionChanged"/>
+                                    <ComboBox x:Name="VoiceCombo" Grid.Column="1" Header="Voice" HorizontalAlignment="Stretch" SelectionChanged="VoiceCombo_SelectionChanged"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                </Button>
+
+                    <!-- COLUMNA 2: TWITCH + TEST (Stuck Vertical) -->
+                    <StackPanel Spacing="25" Margin="0,0,20,20" VerticalAlignment="Top">
+                        <!-- TWITCH SERVICE -->
+                        <StackPanel Spacing="15">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <SymbolIcon Symbol="World"/>
+                                <TextBlock Text="Twitch Service" FontSize="18" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                    BorderThickness="1" CornerRadius="8" Padding="20">
+                                <StackPanel Spacing="15">
+                                    <Button x:Name="ConnectBtn" Click="Connect_Click" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch" Padding="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <SymbolIcon x:Name="ConnectIcon" Symbol="Play"/>
+                                            <TextBlock x:Name="ConnectText" Text="Connect Service" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="LinkStreamerBtn" Click="LinkStreamer_Click" Content="Broadcaster" HorizontalAlignment="Stretch"/>
+                                        <Button x:Name="LinkBotBtn" Grid.Column="1" Click="LinkBot_Click" Content="Bot Account" HorizontalAlignment="Stretch"/>
+                                    </Grid>
+                                    <StackPanel Spacing="8" Margin="0,5,0,0">
+                                        <CheckBox x:Name="ReadChatToggle" Content="Enable Chat TTS" Click="SettingChanged"/>
+                                        <CheckBox x:Name="TestModeToggle" Content="Test Mode (No Replies)" Click="SettingChanged" Foreground="OrangeRed" FontWeight="Medium"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- QUICK TEST-->
+                        <StackPanel Spacing="15">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <SymbolIcon Symbol="Audio"/>
+                                <TextBlock Text="Quick Test" FontSize="18" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                    BorderThickness="1" CornerRadius="8" Padding="20">
+                                <StackPanel Spacing="15">
+                                    <TextBox x:Name="TestInput" PlaceholderText="Type here..." 
+                                             Text="Testing output!" FontSize="14"/>
+                                    <Button Content="Speak Test" Click="Test_Click" HorizontalAlignment="Stretch" 
+                                            Style="{StaticResource AccentButtonStyle}"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </VariableSizedWrapGrid>
             </StackPanel>
+        </ScrollViewer>
 
-            <MenuFlyoutSeparator/>
+        <!-- SIDEBAR GUIDE (RIGHT) -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="15" Padding="0,0,0,20">
+                <TextBlock Text="Tag &amp; Scripting Guide" 
+                   FontWeight="Bold" 
+                   FontSize="20" 
+                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" 
+                   Margin="0,0,0,10"
+                   HorizontalAlignment="Left"/>
 
-            <!-- Test TTS -->
-            <StackPanel Spacing="12">
-                <TextBlock Text="Test TTS" Style="{StaticResource TitleTextBlockStyle}"/>
-                <Grid ColumnSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox x:Name="TestInput" PlaceholderText="Type a test message..." Text="Testing Jakey TTS voice output!"/>
-                    <Button Grid.Column="1" Content="Speak" Click="Test_Click" Width="80"/>
-                </Grid>
+                <!-- 1. DYNAMIC SCRIPTING -->
+                <Expander Header="Dynamic Scripting" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left"
+                  IsExpanded="True">
+                    <StackPanel Spacing="12" Padding="4">
+                        <TextBlock Text="USER &amp; ARGUMENTS" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{user} / {target}" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Sender and first word." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{1}, {2}, {3}..." FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Words from message." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="RANDOMIZERS" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,10,0,0"/>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{random:X-Y}" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: {random:1-100}" FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[choose: A | B]" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: [choose: Yes | No]" FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 2. VOICE & PITCH -->
+                <Expander Header="Voice &amp; Pitch" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="12" Padding="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[high+1.5] / [deep+0.7]" FontWeight="Bold" FontSize="15" Foreground="Orchid"/>
+                            <TextBlock Text="Multiplier (x). Higher = Squeakier." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[whisper]" FontWeight="Bold" FontSize="15" Foreground="Plum"/>
+                            <TextBlock Text="Soft breathy voice style." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[volume+0.5]" FontWeight="Bold" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Multiplier (x). Range: 0.0 to 1.0" FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 3. AUDIO EFFECTS -->
+                <Expander Header="Audio Effects" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="12" Padding="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[robot]" FontWeight="Bold" FontSize="15" Foreground="IndianRed"/>
+                            <TextBlock Text="Metallic ring-modulation." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[echo:300]" FontWeight="Bold" FontSize="15" Foreground="LightCoral"/>
+                            <TextBlock Text="Delay in Milliseconds (ms)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: [echo:500] for long trails." FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[reverse]" FontWeight="Bold" FontSize="15" Foreground="Salmon"/>
+                            <TextBlock Text="Plays audio backward." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- 4. TIMING & SYSTEM -->
+                <Expander Header="Timing &amp; Speed" 
+                  HorizontalAlignment="Stretch" 
+                  HorizontalContentAlignment="Left">
+                    <StackPanel Spacing="12" Padding="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[speed+1.2]" FontWeight="Bold" FontSize="15" Foreground="MediumSeaGreen"/>
+                            <TextBlock Text="Speed Multiplier (x)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Ex: [speed+2.0] is very fast." FontSize="12" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[pause+1.5]" FontWeight="Bold" FontSize="15" Foreground="DodgerBlue"/>
+                            <TextBlock Text="Wait in Seconds (s)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[pause:500]" FontWeight="Bold" FontSize="15" Foreground="SteelBlue"/>
+                            <TextBlock Text="Wait in Milliseconds (ms)." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="[normal] or [reset]" FontWeight="Bold" FontSize="15" Foreground="DarkOrange"/>
+                            <TextBlock Text="Removes all active tags." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- ESPACIADOR FÍSICO FINAL -->
+                <Rectangle Height="80" Fill="Transparent" IsHitTestVisible="False"/>
             </StackPanel>
-
-            <MenuFlyoutSeparator/>
-
-            <!-- Voice Settings -->
-            <StackPanel Spacing="12">
-                <TextBlock Text="Voice Settings" Style="{StaticResource TitleTextBlockStyle}"/>
-
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Language Family" FontWeight="SemiBold" Style="{StaticResource CaptionTextBlockStyle}"/>
-                    <ComboBox x:Name="LanguageCombo" Width="280" SelectionChanged="LanguageCombo_SelectionChanged"/>
-                </StackPanel>
-
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Specific Voice" FontWeight="SemiBold" Style="{StaticResource CaptionTextBlockStyle}"/>
-                    <ComboBox x:Name="VoiceCombo" Width="280" SelectionChanged="VoiceCombo_SelectionChanged"/>
-                </StackPanel>
-            </StackPanel>
-
-            <MenuFlyoutSeparator/>
-
-            <!-- Accounts & Toggles -->
-            <StackPanel Spacing="12">
-                <TextBlock Text="Twitch Configuration" Style="{StaticResource TitleTextBlockStyle}"/>
-
-                <Button x:Name="LinkStreamerBtn" Click="LinkStreamer_Click" Width="280"/>
-                <Button x:Name="LinkBotBtn" Click="LinkBot_Click" Width="280"/>
-
-                <StackPanel Spacing="4" Margin="0,10,0,0">
-                    <CheckBox x:Name="ReadChatToggle" Content="Enable Auto-Chat TTS" Click="SettingChanged"/>
-                    <CheckBox x:Name="TestModeToggle" Content="Test Mode (No Chat Replies)" Click="SettingChanged" Foreground="OrangeRed"/>
-                </StackPanel>
-            </StackPanel>
-
-        </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+    </Grid>
 </Page>

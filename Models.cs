@@ -1,8 +1,12 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
+﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using JakeyTTS.Melodies;
 
 namespace JakeyTTS
 {
@@ -13,17 +17,17 @@ namespace JakeyTTS
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    
-        public class CommandItem
-        {
-            public string Trigger { get; set; } = "!";
-            public string Response { get; set; } = "";
-            public bool IsEnabled { get; set; } = true;
-            public bool ShouldSpeak { get; set; } = true;
-            public bool ShouldReplyInChat { get; set; } = false;
-            public bool ReplyAsBot { get; set; } = false;
-        }
-    
+
+    public class CommandItem
+    {
+        public bool IsEnabled { get; set; } = true;
+        public string Trigger { get; set; } = string.Empty;
+        public string Response { get; set; } = string.Empty;
+        public bool ShouldSpeak { get; set; } = true;
+        public bool ShouldReplyInChat { get; set; } = false;
+        public bool ReplyAsBot { get; set; } = false;
+    }
+
 
     public class RedeemItem : BaseNotify
     {
@@ -40,19 +44,109 @@ namespace JakeyTTS
         public string User { get; set; }
         public string Message { get; set; }
         public string Time { get; set; }
-        public TtsEntry(string user, string message, string time)
+        public string Source { get; set; } // "Command" or "Reward"
+
+        public TtsEntry(string user, string message, string time, string source)
         {
             User = user;
             Message = message;
             Time = time;
+            Source = source;
         }
     }
+
+    public class SoundEffectItem : BaseNotify
+    {
+        public string TagName { get; set; } // e.g., "laugh" -> triggers [laugh]
+        public string FileName { get; set; } // The name of the file in AppData
+        public bool IsEnabled { get; set; } = true;
+
+        [JsonIgnore]
+        public string FullPath => Path.Combine(AppConfig.BaseFolder, "sounds", FileName);
+    }
+
+    public class VoiceWeight : BaseNotify
+    {
+        private string _voiceName = "";
+        public string VoiceName
+        {
+            get => _voiceName;
+            set { if (_voiceName == value) return; _voiceName = value; OnPropertyChanged(); }
+        }
+
+        private float _weight = 0.5f;
+        public float Weight
+        {
+            get => _weight;
+            set
+            {
+                if (Math.Abs(_weight - value) < 0.0001f) return;
+                _weight = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public class MixedVoiceItem : BaseNotify
+    {
+        private string _name = "";
+        public string Name
+        {
+            get => _name;
+            set { if (_name == value) return; _name = value; OnPropertyChanged(); }
+        }
+
+        public ObservableCollection<VoiceWeight> Components { get; set; } = new();
+
+        private bool _isEnabled = true;
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set { if (_isEnabled == value) return; _isEnabled = value; OnPropertyChanged(); }
+        }
+    }
+
+    public class UserActionItem : BaseNotify
+    {
+        private int _threshold = 0;
+        public int Threshold { get => _threshold; set { _threshold = value; OnPropertyChanged(); } }
+
+        private string _response = "";
+        public string Response { get => _response; set { _response = value; OnPropertyChanged(); } }
+
+        private bool _isEnabled = true;
+        public bool IsEnabled { get => _isEnabled; set { _isEnabled = value; OnPropertyChanged(); } }
+    }
+
+    public class UserActionsConfig : BaseNotify
+    {
+        public ObservableCollection<UserActionItem> BitActions { get; set; } = new();
+        public ObservableCollection<UserActionItem> SubActions { get; set; } = new(); // Total months
+        public ObservableCollection<UserActionItem> StreakActions { get; set; } = new(); // Current Streak
+
+        private string _subGoalReachedResponse = "Goal reached! {goal_title}";
+        public string SubGoalReachedResponse { get => _subGoalReachedResponse; set { _subGoalReachedResponse = value; OnPropertyChanged(); } }
+    }
+
 
     [JsonSerializable(typeof(AppConfig))]
     [JsonSerializable(typeof(CommandItem))]
     [JsonSerializable(typeof(RedeemItem))]
+    [JsonSerializable(typeof(Melody))]
+    [JsonSerializable(typeof(MelodyPoint))]
+    [JsonSerializable(typeof(List<Melody>))]
+    [JsonSerializable(typeof(List<MelodyPoint>))]
+    [JsonSerializable(typeof(List<CommandItem>))]
     [JsonSerializable(typeof(List<RedeemItem>))]
-    [JsonSerializable(typeof(JsonElement))] // Necesario para las respuestas de la API de Twitch
+    [JsonSerializable(typeof(List<SoundEffectItem>))]
+    [JsonSerializable(typeof(MixedVoiceItem))]
+    [JsonSerializable(typeof(VoiceWeight))]
+    [JsonSerializable(typeof(List<MixedVoiceItem>))]
+    [JsonSerializable(typeof(List<VoiceWeight>))]
+    [JsonSerializable(typeof(UserActionsConfig))]
+    [JsonSerializable(typeof(UserActionItem))]
+    [JsonSerializable(typeof(List<UserActionItem>))]
+    [JsonSerializable(typeof(JsonElement))] // Needed for API Twitch responses
     internal partial class JakeyJsonContext : JsonSerializerContext
     {
     }

@@ -1,71 +1,105 @@
 using System;
+using System.IO;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using WinRT.Interop;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using System.Runtime.InteropServices;
+using JakeyTTS.UserActions;
 
 namespace JakeyTTS
 {
-    /// <summary>
-    /// Ventana principal que gestiona la navegación, el tema y la consola de logs.
-    /// </summary>
     public sealed partial class MainWindow : Window
     {
-        // Instancia estática para acceso global desde servicios y otras páginas
         public static MainWindow Instance { get; private set; }
+
+        private const int WM_HOTKEY = 0x0312;
+        private delegate IntPtr SubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, uint uIdSubclass, IntPtr dwRefData);
+
+        [DllImport("Comctl32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool SetWindowSubclass(IntPtr hWnd, SubclassProc callback, uint uIdSubclass, IntPtr dwRefData);
+
+        [DllImport("Comctl32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr DefSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+
+        private SubclassProc _subclassProcDelegate;
 
         public MainWindow()
         {
-            this.InitializeComponent();
             Instance = this;
+            this.InitializeComponent();
+            
 
-            // 1. Configuración visual avanzada
-            SystemBackdrop = new MicaBackdrop(); // Efecto traslúcido de Windows 11
-            ExtendsContentIntoTitleBar = true;   // Permite usar el espacio de la barra de título
-            SetTitleBar(null);                   // El NavigationView gestionará el arrastre
+            this.Title = "JakeyTTS";
+            SystemBackdrop = new MicaBackdrop();
+            ExtendsContentIntoTitleBar = true;
 
-            // 2. Aplicar el tema (Claro/Oscuro) al arrancar
+            SetTitleBar(AppTitleBar);
+
+            SetAppIcon();
             ApplySavedTheme();
 
-            // 3. Navegación inicial a la Home (con el Header oculto)
+            // Hotkey Initialization
+            IntPtr hWnd = WindowNative.GetWindowHandle(this);
+            _subclassProcDelegate = new SubclassProc(WindowSubclassCallback);
+            SetWindowSubclass(hWnd, _subclassProcDelegate, 0, IntPtr.Zero);
+
+            HotkeyService.Instance.Setup(hWnd);
+
             NavView.Header = null;
             ContentFrame.Navigate(typeof(HomePage));
         }
 
-        /// <summary>
-        /// Aplica el tema visual guardado en el archivo de configuración.
-        /// </summary>
-        private void ApplySavedTheme()
+        private IntPtr WindowSubclassCallback(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, uint uIdSubclass, IntPtr dwRefData)
         {
-            var savedTheme = TwitchService.Instance.Config.SelectedTheme;
-            if (this.Content is FrameworkElement rootElement)
+            if (uMsg == WM_HOTKEY)
             {
-                // 0 = Default, 1 = Light, 2 = Dark
-                rootElement.RequestedTheme = (ElementTheme)savedTheme;
+                int hotkeyId = wParam.ToInt32();
+                HotkeyService.Instance.ProcessHotkey(hotkeyId);
+            }
+            return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+
+        private void SetAppIcon()
+        {
+            try
+            {
+                IntPtr hWnd = WindowNative.GetWindowHandle(this);
+                WindowId windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
+                AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
+                string iconPath = Path.Combine(AppContext.BaseDirectory, "app.ico");
+
+                if (File.Exists(iconPath))
+                {
+                    appWindow.SetIcon(iconPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to set icon: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Escribe un mensaje en la consola inferior de la aplicación de forma segura.
-        /// </summary>
-        public void Log(string message)
+        private void ApplySavedTheme()
         {
-            // Importante: Los eventos de Twitch vienen de hilos secundarios.
-            // DispatcherQueue asegura que la UI se actualice en el hilo principal.
-            this.DispatcherQueue.TryEnqueue(() =>
+            try
             {
-                LogBlock.Text += $"[{DateTime.Now:HH:mm:ss}] {message}\r\n";
-
-                // Desplazamiento automático al final del log
-                LogScroll.ChangeView(0, LogScroll.ScrollableHeight, 1);
-            });
+                var config = TwitchService.Instance.Config;
+                if (config != null && this.Content is FrameworkElement rootElement)
+                {
+                    rootElement.RequestedTheme = (ElementTheme)config.SelectedTheme;
+                }
+            }
+            catch { }
         }
 
-        #region Lógica de Navegación
+        #region Navigation Logic
 
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
         {
-            // Caso: Click en el icono de configuración (Settings)
             if (args.IsSettingsInvoked)
             {
                 sender.Header = "Settings";
@@ -73,39 +107,86 @@ namespace JakeyTTS
                 return;
             }
 
-            // Casos: Menú lateral personalizado
             var item = args.InvokedItemContainer as NavigationViewItem;
             if (item?.Tag == null) return;
 
             string tag = item.Tag.ToString();
-
-            // GESTIÓN DEL HEADER:
-            // Si vamos a la Home, ocultamos el título. Si no, usamos el nombre del botón.
-            sender.Header = (tag == "Home") ? null : item.Content;
+            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag=="UserActions") ? null : item.Content;
 
             switch (tag)
             {
                 case "Home":
                     ContentFrame.Navigate(typeof(HomePage));
                     break;
-
                 case "TTSConfig":
                     ContentFrame.Navigate(typeof(TTSConfigPage));
                     break;
-
+                case "UserActions":
+                    ContentFrame.Navigate(typeof(UserActionsPage));
+                    break;
                 case "Commands":
                     ContentFrame.Navigate(typeof(CommandsPage));
                     break;
-
                 case "Rewards":
                     ContentFrame.Navigate(typeof(RedeemPage));
                     break;
                 case "History":
                     ContentFrame.Navigate(typeof(HistoryPage));
                     break;
+                case "Keybinds":
+                    ContentFrame.Navigate(typeof(KeybindsPage));
+                    break;
+                case "Melodies":
+                    ContentFrame.Navigate(typeof(MelodyPage));
+                    break;
+                case "SFX":
+                    ContentFrame.Navigate(typeof(SoundEffectsPage));
+                    break;
+                case "MixedVoices":
+                    ContentFrame.Navigate(typeof(JakeyTTS.MixVoices.MixedVoicesPage));
+                    break;
             }
         }
 
+        #endregion
+
+        #region Log
+
+        public void Log(string message)
+        {
+            if (this.DispatcherQueue == null) return;
+
+            this.DispatcherQueue.TryEnqueue(() =>
+            {
+                try
+                {
+                    if (LogBlock != null)
+                    {
+                        LogBlock.Text += $"[{DateTime.Now:HH:mm:ss}] {message}\r\n";
+                        LogScroll?.ChangeView(0, LogScroll.ScrollableHeight, 1);
+                    }
+                }
+                catch { }
+            });
+        }
+
+        private void LogToggle_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            if (LogRow.Height.Value > 0)
+            {
+                LogRow.Height = new GridLength(0);
+                LogBorder.Visibility = Visibility.Collapsed;
+                LogToggleBtn.Content = "Show Log";
+                LogToggleBtn.Icon = new SymbolIcon(Symbol.Memo);
+            }
+            else
+            {
+                LogRow.Height = new GridLength(150);
+                LogBorder.Visibility = Visibility.Visible;
+                LogToggleBtn.Content = "Hide Log";
+                LogToggleBtn.Icon = new SymbolIcon(Symbol.List);
+            }
+        }
         #endregion
     }
 }
