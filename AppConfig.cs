@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using Windows.System;
@@ -39,6 +40,9 @@ namespace JakeyTTS
         public List<MixedVoiceItem> MixedVoices { get; set; } = new();
 
         public UserActionsConfig UserActions { get; set; } = new();
+
+        public ObservableCollection<PluginItem> Plugins { get; set; } = new();
+
         // --- Paths ---
         public static string BaseFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JakeyTTS");
         public static string VoicesFolder => Path.Combine(BaseFolder, "voices");
@@ -68,6 +72,7 @@ namespace JakeyTTS
             ReplayLastKey = (int)VirtualKey.F11;   // Default F11
 
             UserActions = new UserActionsConfig();
+            Plugins = new ObservableCollection<PluginItem>();
             Commands = new List<CommandItem>
             {
                 new CommandItem {

@@ -16,11 +16,11 @@
 		<UseWinUI>true</UseWinUI>
 		<Nullable>enable</Nullable>
 
-		<Version>1.7.0</Version>
-		<AssemblyVersion>1.7.0.0</AssemblyVersion>
-		<FileVersion>1.7.0.0</FileVersion>
-		<ApplicationDisplayVersion>1.7.0</ApplicationDisplayVersion>
-		<ApplicationVersion>1.7.0.0</ApplicationVersion>
+		<Version>1.8.0</Version>
+		<AssemblyVersion>1.8.0.0</AssemblyVersion>
+		<FileVersion>1.8.0.0</FileVersion>
+		<ApplicationDisplayVersion>1.8.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1.8.0.0</ApplicationVersion>
 
 		<!-- CONFIGURACIÓN PORTABLE (UNPACKAGED) -->
 		<WindowsPackageType>None</WindowsPackageType>
@@ -64,6 +64,8 @@
 		<Content Include="voices\**\*.npy" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="voices\**\*.json;voices\**\*.py" CopyToOutputDirectory="PreserveNewest" />
 		<None Remove="MixVoices\MixedVoicesPage.xaml" />
+		<None Remove="Plugins\PLuginsDocPage.xaml" />
+		<None Remove="Plugins\PluginsPage.xaml" />
 		<None Remove="SoundEffectsPage.xaml" />
 		<None Remove="UserActions\UserActionsPage.xaml" />
 		<Content Include="assets\kokoro-v1.0.onnx" Link="kokoro-v1.0.onnx" CopyToOutputDirectory="PreserveNewest" />
@@ -77,6 +79,18 @@
 
 	<ItemGroup>
 	  <Folder Include="Melodies\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Page Update="Plugins\PLuginsDocPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </Page>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Page Update="Plugins\PluginsPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </Page>
 	</ItemGroup>
 
 	<ItemGroup>

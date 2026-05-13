@@ -1,0 +1,190 @@
+<Page
+    x:Class="JakeyTTS.Plugins.PluginDocsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Margin="40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Back Button -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,30">
+            <Button Click="Back_Click" Style="{StaticResource AlternateCloseButtonStyle}" Background="Transparent" BorderThickness="0" Padding="8">
+                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE72B;" FontSize="16"/>
+            </Button>
+            <TextBlock Text="Plugin Developer Guide" Style="{StaticResource TitleTextBlockStyle}" FontWeight="Bold" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Documentation Content -->
+        <ScrollViewer Grid.Row="1" Padding="0,0,20,0">
+            <StackPanel Spacing="35" MaxWidth="800" HorizontalAlignment="Left">
+
+                <TextBlock Text="Building a custom integration for JakeyTTS is incredibly simple. It uses a local WebSocket server to stream real-time TTS audio data directly to your application." 
+                           TextWrapping="Wrap" FontSize="15" Opacity="0.8"/>
+
+                <!-- Step 1 -->
+                <StackPanel Spacing="10">
+                    <TextBlock Text="1. Connection Protocol" FontWeight="Bold" FontSize="20"/>
+                    <TextBlock Text="JakeyTTS hosts a local WebSocket server on port 8889. Your plugin must connect as a client to this URL:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                        <TextBlock Text="ws://localhost:8889/" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Step 2 -->
+                <StackPanel Spacing="10">
+                    <TextBlock Text="2. Registration Payload" FontWeight="Bold" FontSize="20"/>
+                    <TextBlock Text="Immediately after connecting, your plugin MUST send a registration JSON packet. This tells JakeyTTS who you are and what events you want to listen to. It will then appear in the user's Plugin tab for approval." TextWrapping="Wrap" Opacity="0.8"/>
+
+                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                        <TextBlock FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                            <Run Foreground="#569CD6">{"</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"register"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "id"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"my-unique-plugin-id"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "name"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"My Cool Visualizer"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "version"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"1.0.0"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "protocol_version"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"1.0"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "subscriptions"</Run><Run Foreground="#D4D4D4">: [</Run><Run Foreground="#CE9178">"chat"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#CE9178">"redeems"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#CE9178">"test"</Run><Run Foreground="#D4D4D4">]</Run><LineBreak/>
+                            <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                            <Run Foreground="#569CD6">}"</Run>
+                        </TextBlock>
+                    </Border>
+
+                    <TextBlock Text="Once sent, JakeyTTS will reply with an 'auth_status' event letting you know if the user approved your connection." FontSize="13" Opacity="0.6" FontStyle="Italic"/>
+
+                    <!-- Subscription Reference Table -->
+                    <TextBlock Text="Available Subscription Scopes:" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" CornerRadius="8">
+                        <StackPanel>
+                            <!-- Table Header -->
+                            <Grid Padding="15,10" Background="{ThemeResource LayerFillColorAltBrush}" CornerRadius="8,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Scope Name" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
+                                <TextBlock Grid.Column="1" Text="What it triggers on" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}"/>
+
+                            <!-- Row 1: Test -->
+                            <Grid Padding="15,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&quot;test&quot;" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="When the streamer clicks a 'Test Audio' button inside the main JakeyTTS app." FontSize="13" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
+
+                            <!-- Row 2: Commands -->
+                            <Grid Padding="15,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&quot;commands&quot;" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="When viewers use specific chat commands (e.g., !tts Hello)." FontSize="13" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
+
+                            <!-- Row 3: Redeems -->
+                            <Grid Padding="15,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&quot;redeems&quot;" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="When viewers redeem specific Twitch Channel Point rewards tied to TTS." FontSize="13" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
+
+                            <!-- Row 4: Bits -->
+                            <Grid Padding="15,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&quot;bits&quot;" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="When viewers cheer Bits that trigger a TTS message." FontSize="13" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
+
+                            <!-- Row 5: Subs -->
+                            <Grid Padding="15,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&quot;subs&quot;" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="When someone Subscribes or Gifts a sub, triggering a TTS alert." FontSize="13" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
+
+                            <!-- Row 6: Chat -->
+                            <Grid Padding="15,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&quot;chat&quot;" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="When any standard chat message is read by the TTS engine." FontSize="13" TextWrapping="Wrap" Opacity="0.8" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Step 3 -->
+                <StackPanel Spacing="10">
+                    <TextBlock Text="3. Receiving Audio (Event Broadcast)" FontWeight="Bold" FontSize="20"/>
+                    <TextBlock Text="Whenever JakeyTTS generates speech for one of your subscribed events, it will push a JSON packet to you containing the Base64 encoded WAV audio." TextWrapping="Wrap" Opacity="0.8"/>
+
+                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                        <TextBlock FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                            <Run Foreground="#569CD6">{"</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"event_broadcast"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "source"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"redeems"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "text"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Hello stream!"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "audio_base64"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AA..."</Run><LineBreak/>
+                            <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                            <Run Foreground="#569CD6">}"</Run>
+                        </TextBlock>
+                    </Border>
+                    <TextBlock Text="To play the audio, simply decode the Base64 string back into bytes. The audio is provided as a standard 24kHz Mono WAV file format." FontSize="13" Opacity="0.6" FontStyle="Italic"/>
+                </StackPanel>
+
+                <!-- NEW: Step 4 (Triggering Speech) -->
+                <StackPanel Spacing="10" Margin="0,0,0,20">
+                    <TextBlock Text="4. Triggering Speech (Sending Text)" FontWeight="Bold" FontSize="20"/>
+                    <TextBlock Text="Your plugin can also command JakeyTTS to speak custom text on demand. Send a 'speak_request' JSON packet over the WebSocket, and the server will generate and play the audio." TextWrapping="Wrap" Opacity="0.8"/>
+
+                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                        <TextBlock FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                            <Run Foreground="#569CD6">{"</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"speak_request"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "text"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Hello from my custom plugin!"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                            <Run Foreground="#9CDCFE">    "interrupt"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#569CD6">false</Run><LineBreak/>
+                            <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                            <Run Foreground="#569CD6">}"</Run>
+                        </TextBlock>
+                    </Border>
+                    <TextBlock Text="If 'interrupt' is set to true, JakeyTTS will immediately stop the currently playing audio and speak your message. Otherwise, it will safely be added to the end of the TTS queue." FontSize="13"  TextWrapping="Wrap"  Opacity="0.6" FontStyle="Italic"/>
+                    <TextBlock Text="Triggering Speech is in early development" FontSize="13" Opacity="0.6" FontStyle="Italic"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

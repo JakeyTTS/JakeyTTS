@@ -31,19 +31,54 @@
                         ItemInvoked="NavView_ItemInvoked">
 
             <NavigationView.MenuItems>
+                <!-- Standard icons can still use the shorthand -->
                 <NavigationViewItem Content="Home" Tag="Home" Icon="Home"/>
                 <NavigationViewItem Content="TTS Settings" Tag="TTSConfig" Icon="People"/>
-                <NavigationViewItem Content="User Actions" Tag="UserActions" Icon="Contact2"/>
-                <NavigationViewItem Content="History" Tag="History" Icon="Clock"/>
-                <NavigationViewItem Content="Commands" Tag="Commands" Icon="Go"/>
+
+                <!-- New icons require the FontIcon syntax -->
+                <NavigationViewItem Content="User Actions" Tag="UserActions">
+                    <NavigationViewItem.Icon>
+                        <!-- Contact2 Icon -->
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA4A;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem Content="History" Tag="History" >
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE81C;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Commands" Tag="Commands">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE90A;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem Content="Redeems" Tag="Rewards" Icon="OutlineStar"/>
 
-                <NavigationViewItem Content="Melodies" Tag="Melodies" Icon="MusicInfo"/>
-                <NavigationViewItem Content="Sound Effects" Tag="SFX" Icon="Audio"/>
+                <!-- New MusicInfo Icon -->
+                <NavigationViewItem Content="Melodies" Tag="Melodies">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8D6;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
+                <NavigationViewItem Content="Sound Effects" Tag="SFX" >
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF61F;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem Content="Mixed Voices" Tag="MixedVoices" Icon="Volume"/>
+
                 <NavigationViewItemSeparator/>
+
                 <NavigationViewItem Content="Keybinds" Tag="Keybinds" Icon="Keyboard"/>
+
+                <!-- New Puzzle (Extension) Icon -->
+                <NavigationViewItem Content="Plugins &amp; Integrations" Tag="Plugins">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA86;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <NavigationView.PaneFooter>

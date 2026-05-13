@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using JakeyTTS.Melodies; // Asegúrate de que esto apunte a donde está MelodyPoint
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Foundation;
-using JakeyTTS.Melodies; // Asegúrate de que esto apunte a donde está MelodyPoint
 
 namespace JakeyTTS.Converters
 {
@@ -61,19 +64,27 @@ namespace JakeyTTS.Converters
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            // Si el parámetro es "Inverse", invertimos la lógica
-            bool isInverse = parameter as string == "Inverse";
-            bool isNull = value == null;
+            // 1. Check if the value is null OR an empty string
+            bool isNullOrEmpty = value == null || (value is string str && string.IsNullOrWhiteSpace(str));
 
+            // 2. Check if we passed "Inverse" in the XAML parameter
+            bool isInverse = parameter?.ToString() == "Inverse";
+
+            // 3. Return the correct visibility
             if (isInverse)
             {
-                return isNull ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+                return isNullOrEmpty ? Visibility.Visible : Visibility.Collapsed;
             }
-            return isNull ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+            else
+            {
+                return isNullOrEmpty ? Visibility.Collapsed : Visibility.Visible;
+            }
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, string language)
-            => throw new NotImplementedException();
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class MelodyToPointCollectionConverter : IValueConverter
@@ -106,4 +117,31 @@ namespace JakeyTTS.Converters
         public object ConvertBack(object value, Type targetType, object parameter, string language)
             => throw new NotImplementedException();
     }
+
+    public class Base64ToImageConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, string language)
+        {
+            string base64 = value as string;
+            if (string.IsNullOrWhiteSpace(base64)) return null;
+
+            try
+            {
+                // Remove the "data:image/png;base64," prefix if it exists
+                if (base64.Contains(",")) base64 = base64.Split(',')[1];
+
+                byte[] bytes = System.Convert.FromBase64String(base64);
+                using var ms = new MemoryStream(bytes);
+                var image = new BitmapImage();
+                // RandomAccessStream is needed for WinUI 3, we wrap the memory stream
+                image.SetSource(ms.AsRandomAccessStream());
+                return image;
+            }
+            catch { return null; }
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotImplementedException();
+    }
+
+
 }

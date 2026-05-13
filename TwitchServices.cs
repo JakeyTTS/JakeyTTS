@@ -52,6 +52,9 @@ namespace JakeyTTS
             Config = AppConfig.Load();
             SetupAndLoadTTS();
             MelodyService.Instance.Initialize();
+
+            // Iniciar el servidor de Plugins WebSocket
+            PluginServer.Instance.Start();
         }
 
         private void SetupAndLoadTTS()
@@ -106,10 +109,6 @@ namespace JakeyTTS
 
         #region Audio Processing Effects (Technical Documentation)
 
-        /*
-         * REVERSE EFFECT (Temporal Phase Inversion)
-         * We iterate through the data in 2-byte blocks to preserve 16-bit sample integrity.
-         */
         private byte[] ReverseAudio(byte[] data)
         {
             if (data == null || data.Length < 2) return data;
@@ -125,10 +124,6 @@ namespace JakeyTTS
             return reversed;
         }
 
-        /*
-         * ROBOT EFFECT (Ring Modulation)
-         * Multiply carrier by a 50Hz sine wave modulator to dehumanize formants.
-         */
         private byte[] ApplyRobotEffect(byte[] data)
         {
             if (data == null || data.Length < 2) return data;
@@ -147,10 +142,6 @@ namespace JakeyTTS
             return processed;
         }
 
-        /*
-         * ECHO EFFECT (Feedback Delay Line)
-         * Summing signal with delayed version. Includes buffer expansion for tail.
-         */
         private byte[] ApplyEchoEffect(byte[] data, int delayMs)
         {
             if (data == null || data.Length < 2 || delayMs <= 0) return data;
@@ -241,7 +232,32 @@ namespace JakeyTTS
 
         #region TTS Engine & Tag Handler
 
-        public async Task ProcessAndSpeak(string input)
+        // 1. AÑADIDO: Método silencioso para uso del PluginServer (Peticiones directas)
+        public async Task<byte[]?> SynthesizeSilentAsync(string text, string voiceName, float speed = 1.0f)
+        {
+            if (Synthesizer == null || string.IsNullOrWhiteSpace(text)) return null;
+
+            await _ttsSemaphore.WaitAsync();
+            try
+            {
+                var voice = ResolveVoice(voiceName) ?? KokoroVoiceManager.Voices.FirstOrDefault();
+                if (voice == null) return null;
+
+                return Synthesizer.Synthesize(text, voice, new KokoroTTSPipelineConfig { Speed = speed });
+            }
+            catch (Exception ex)
+            {
+                LogUI($"❌ Silent TTS Error: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                _ttsSemaphore.Release();
+            }
+        }
+
+        // 2. MODIFICADO: Ahora acepta el 'scope' y hace el Broadcast
+        public async Task ProcessAndSpeak(string input, string scope = "chat")
         {
             if (Synthesizer == null || string.IsNullOrWhiteSpace(input)) return;
 
@@ -296,6 +312,10 @@ namespace JakeyTTS
                         if (currentRobot) wavData = ApplyRobotEffect(wavData);
                         if (currentEcho > 0) wavData = ApplyEchoEffect(wavData, currentEcho);
                         if (currentReverse) wavData = ReverseAudio(wavData);
+
+                        // 3. AÑADIDO: Emitir evento al servidor de Plugins
+                        _ = PluginServer.Instance.BroadcastEventAsync(scope, segment, wavData);
+
                         await PlayWavData(wavData, currentVolume, currentPitch, currentMelody);
                     }
                 }
@@ -346,7 +366,7 @@ namespace JakeyTTS
             {
                 string res = action.Response.Replace("{user}", ev.UserName).Replace("{bits}", ev.Bits.ToString());
                 AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
-                await ProcessAndSpeak($"{res} {ev.Message}");
+                await ProcessAndSpeak($"{res} {ev.Message}", "bits"); // AÑADIDO SCOPE
             }
         }
 
@@ -362,7 +382,7 @@ namespace JakeyTTS
 
             string finalMsg = response.Replace("{user}", ev.UserName).Replace("{months}", ev.CumulativeMonths.ToString()).Replace("{streak}", ev.StreakMonths.ToString());
             AddToHistory(ev.UserName, "Subscription", "Sub");
-            await ProcessAndSpeak($"{finalMsg} {ev.Message.Text}");
+            await ProcessAndSpeak($"{finalMsg} {ev.Message.Text}", "subs"); // AÑADIDO SCOPE
         }
 
         private async Task HandleGoalProgress(object? s, ChannelGoalProgressArgs e)
@@ -371,7 +391,7 @@ namespace JakeyTTS
             if (ev.CurrentAmount >= ev.TargetAmount && !string.IsNullOrEmpty(Config.UserActions?.SubGoalReachedResponse))
             {
                 string msg = Config.UserActions.SubGoalReachedResponse.Replace("{goal_title}", ev.Description);
-                await ProcessAndSpeak(msg);
+                await ProcessAndSpeak(msg, "goals"); // AÑADIDO SCOPE
             }
         }
         #endregion
@@ -426,13 +446,13 @@ namespace JakeyTTS
                 string res = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger);
                 if (cmd.ShouldReplyInChat) await SendChatReply(res, cmd.ReplyAsBot);
                 AddToHistory(ev.ChatterUserName, res, "Command");
-                if (cmd.ShouldSpeak) await ProcessAndSpeak(res);
+                if (cmd.ShouldSpeak) await ProcessAndSpeak(res, "commands"); // AÑADIDO SCOPE
             }
             else if (Config.ReadChatEnabled)
             {
                 if (ev.ChatterUserId == Config.BroadcasterId && !Config.TestModeActive) return;
                 AddToHistory(ev.ChatterUserName, msg, "Chat");
-                await ProcessAndSpeak(msg);
+                await ProcessAndSpeak(msg, "chat"); // AÑADIDO SCOPE
             }
         }
 
@@ -443,7 +463,7 @@ namespace JakeyTTS
             if (redeemConfig != null && redeemConfig.IsEnabled)
             {
                 string msg = ev.UserInput ?? "";
-                if (!string.IsNullOrWhiteSpace(msg)) { AddToHistory(ev.UserName, msg, "Reward"); await ProcessAndSpeak(msg); }
+                if (!string.IsNullOrWhiteSpace(msg)) { AddToHistory(ev.UserName, msg, "Reward"); await ProcessAndSpeak(msg, "redeems"); } // AÑADIDO SCOPE
             }
         }
 
@@ -521,7 +541,7 @@ namespace JakeyTTS
         }
 
         public void StopCurrentTTS() => _cts?.Cancel();
-        private void LogUI(string m) => MainWindow.Instance?.Log(m);
+        public void LogUI(string m) => MainWindow.Instance?.Log(m); // Hecho publico para acceso desde PluginServer
         private void AddToHistory(string u, string m, string source) =>
             MainWindow.Instance?.DispatcherQueue?.TryEnqueue(() => {
                 History.Insert(0, new TtsEntry(u, m, DateTime.Now.ToString("HH:mm:ss"), source));

@@ -9,6 +9,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using System.Runtime.InteropServices;
 using JakeyTTS.UserActions;
+using JakeyTTS.Plugins;
 
 namespace JakeyTTS
 {
@@ -111,7 +112,7 @@ namespace JakeyTTS
             if (item?.Tag == null) return;
 
             string tag = item.Tag.ToString();
-            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag=="UserActions") ? null : item.Content;
+            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag=="UserActions" || tag == "Plugins") ? null : item.Content;
 
             switch (tag)
             {
@@ -145,6 +146,9 @@ namespace JakeyTTS
                 case "MixedVoices":
                     ContentFrame.Navigate(typeof(JakeyTTS.MixVoices.MixedVoicesPage));
                     break;
+                case "Plugins":
+                    ContentFrame.Navigate(typeof(PluginsPage));
+                    break;
             }
         }
 
@@ -172,12 +176,14 @@ namespace JakeyTTS
 
         private void LogToggle_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
+            FontIcon icon = new FontIcon();
+            icon.Glyph = "\uEBE8";
             if (LogRow.Height.Value > 0)
             {
                 LogRow.Height = new GridLength(0);
                 LogBorder.Visibility = Visibility.Collapsed;
                 LogToggleBtn.Content = "Show Log";
-                LogToggleBtn.Icon = new SymbolIcon(Symbol.Memo);
+                LogToggleBtn.Icon = icon;
             }
             else
             {
