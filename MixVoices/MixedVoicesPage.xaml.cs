@@ -159,7 +159,7 @@ namespace JakeyTTS.MixVoices
             if (MixGrid.SelectedItem is MixedVoiceItem item)
             {
                 SaveInternal();
-                await _service.ProcessAndSpeak($"[mix:{item.Name}] This is a voice mix preview.");
+                await _service.ProcessAndSpeak($"[mix:{item.Name}] This is a voice mix preview.", "test");
             }
         }
 

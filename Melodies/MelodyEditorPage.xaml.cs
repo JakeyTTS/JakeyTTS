@@ -80,8 +80,7 @@ namespace JakeyTTS
             _melody.Name = previewName;
 
             // Ejecutamos el test
-            await TwitchService.Instance.ProcessAndSpeak($"[melody:{previewName}] This is a preview of your new melody sound.");
-
+            await TwitchService.Instance.ProcessAndSpeak($"[melody:{previewName}] This is a preview of your new melody sound.", "test");
             // Restauramos los valores originales (el guardado real solo ocurre en Save_Click)
             _melody.Points = originalPoints;
             _melody.Name = originalName;

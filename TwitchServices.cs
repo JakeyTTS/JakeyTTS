@@ -308,12 +308,13 @@ namespace JakeyTTS
                     {
                         string segment = m.Groups["text"].Value.Trim();
                         if (string.IsNullOrEmpty(segment)) continue;
+
                         byte[] wavData = Synthesizer.Synthesize(segment, currentActiveVoice, new KokoroTTSPipelineConfig { Speed = currentSpeed });
                         if (currentRobot) wavData = ApplyRobotEffect(wavData);
                         if (currentEcho > 0) wavData = ApplyEchoEffect(wavData, currentEcho);
                         if (currentReverse) wavData = ReverseAudio(wavData);
 
-                        // 3. AÑADIDO: Emitir evento al servidor de Plugins
+                        // BROADCAST: Now using the correct scope (e.g., "test")
                         _ = PluginServer.Instance.BroadcastEventAsync(scope, segment, wavData);
 
                         await PlayWavData(wavData, currentVolume, currentPitch, currentMelody);

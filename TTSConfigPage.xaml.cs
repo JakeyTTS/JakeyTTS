@@ -204,7 +204,7 @@ namespace JakeyTTS
             if (!string.IsNullOrWhiteSpace(TestInput.Text))
             {
                 // Play a sample message using current configuration
-                await _service.ProcessAndSpeak(TestInput.Text);
+                await _service.ProcessAndSpeak(TestInput.Text,"test");
             }
         }
 

@@ -55,7 +55,8 @@ namespace JakeyTTS
         private async void PlayPreview_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button).Tag is Melody m)
-                await TwitchService.Instance.ProcessAndSpeak($"[melody:{m.Name}] This is a melody preview test.");
+                // SPECIFY SCOPE: "test"
+                await TwitchService.Instance.ProcessAndSpeak($"[melody:{m.Name}] This is a melody preview test.", "test");
         }
 
         private void Delete_Click(object sender, RoutedEventArgs e)
