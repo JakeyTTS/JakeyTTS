@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using KokoroSharp;
 using KokoroSharp.Core;
-using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {
@@ -15,7 +14,6 @@ namespace JakeyTTS
     {
         private readonly TwitchService _service = TwitchService.Instance;
 
-        // Mapping display names to the Kokoro Engine language enum
         private readonly Dictionary<string, KokoroLanguage> _languageMap = new Dictionary<string, KokoroLanguage>
         {
             { "Spanish", KokoroLanguage.Spanish },
@@ -30,23 +28,16 @@ namespace JakeyTTS
             this.InitializeComponent();
             InitializeUI();
 
-            // EVENT SUBSCRIPTION: 
-            // The engine indexes 50 voice files in the background on startup.
-            // This listener refreshes the UI automatically once that background task completes.
-            _service.TtsEngineReady += (s, e) => {
+            TtsEngine.Instance.TtsEngineReady += (s, e) => {
                 this.DispatcherQueue.TryEnqueue(() => LoadVoicesForSelectedLanguage());
             };
         }
 
-        /// <summary>
-        /// Populates the UI elements with saved configuration values.
-        /// </summary>
         private void InitializeUI()
         {
             VolumeSlider.Value = _service.Config.GlobalVolume;
 
-            // 1. Setup Audio Output Devices (up to 3 simultaneous outputs)
-            var devices = _service.GetAudioDevices();
+            var devices = TtsEngine.Instance.GetAudioDevices();
             AudioDeviceCombo.ItemsSource = devices;
             AudioDeviceCombo2.ItemsSource = devices;
             AudioDeviceCombo3.ItemsSource = devices;
@@ -60,15 +51,12 @@ namespace JakeyTTS
             AudioDeviceCombo3.SelectedItem = devices.Contains(_service.Config.SelectedAudioDevice3)
                 ? _service.Config.SelectedAudioDevice3 : "None";
 
-            // 2. Setup Language Selector
             LanguageCombo.ItemsSource = _languageMap.Keys.ToList();
             int savedIndex = _service.Config.LanguageIndex;
             LanguageCombo.SelectedIndex = (savedIndex >= 0 && savedIndex < _languageMap.Count) ? savedIndex : 0;
 
-            // 3. Initial attempt to load voices (might show "Loading" if engine is still starting)
             LoadVoicesForSelectedLanguage();
 
-            // 4. Setup Toggles
             ReadChatToggle.IsChecked = _service.Config.ReadChatEnabled;
             TestModeToggle.IsChecked = _service.Config.TestModeActive;
 
@@ -77,11 +65,6 @@ namespace JakeyTTS
         }
 
         #region Audio & Voice Logic
-
-        /// <summary>
-        /// Filters and displays voices based on the selected language.
-        /// Handles the "Loading" state if the engine hasn't finished indexing files.
-        /// </summary>
         private void LoadVoicesForSelectedLanguage()
         {
             if (LanguageCombo.SelectedItem == null) return;
@@ -91,7 +74,6 @@ namespace JakeyTTS
 
             try
             {
-                // Accessing the shared voice list from the Kokoro library
                 var voices = KokoroVoiceManager.GetVoices(selectedLang);
 
                 if (voices != null && voices.Any())
@@ -101,7 +83,6 @@ namespace JakeyTTS
 
                     var savedVoice = _service.Config.DefaultVoice;
 
-                    // Re-select the saved voice if it exists in the current language, else pick first
                     if (!string.IsNullOrEmpty(savedVoice) && voiceNames.Contains(savedVoice))
                         VoiceCombo.SelectedItem = savedVoice;
                     else
@@ -111,7 +92,6 @@ namespace JakeyTTS
                 }
                 else
                 {
-                    // Placeholder while background indexing is in progress
                     VoiceCombo.ItemsSource = new List<string> { "Engine loading voices..." };
                 }
             }
@@ -170,11 +150,9 @@ namespace JakeyTTS
                 _service.Config.Save();
             }
         }
-
         #endregion
 
         #region Service & Test Handlers
-
         private async void Connect_Click(object sender, RoutedEventArgs e)
         {
             ConnectBtn.IsEnabled = false;
@@ -204,15 +182,13 @@ namespace JakeyTTS
         {
             if (!string.IsNullOrWhiteSpace(TestInput.Text))
             {
-                // Play a sample message using current configuration
-                await _service.ProcessAndSpeak(TestInput.Text,"test");
+                // FIXED: Redirigido a TtsEngine
+                await TtsEngine.Instance.ProcessAndSpeak(TestInput.Text, "test");
             }
         }
-
         #endregion
 
         #region Accounts & Settings Toggles
-
         private void UpdateAccountStatus()
         {
             LinkStreamerBtn.Content = string.IsNullOrEmpty(_service.Config.UserName)
@@ -243,7 +219,6 @@ namespace JakeyTTS
             _service.Config.TestModeActive = TestModeToggle.IsChecked ?? false;
             _service.Config.Save();
         }
-
         #endregion
 
         private void LogUI(string msg) => MainWindow.Instance?.Log(msg);

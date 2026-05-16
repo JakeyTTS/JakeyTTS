@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using KokoroSharp;
 using KokoroSharp.Core;
-using JakeyTTS.Twitch;
 
 namespace JakeyTTS.MixVoices
 {
@@ -35,7 +34,7 @@ namespace JakeyTTS.MixVoices
             MixList = new ObservableCollection<MixedVoiceItem>(_service.Config.MixedVoices ?? new());
             MixGrid.ItemsSource = MixList;
 
-            _service.TtsEngineReady += (s, e) => this.DispatcherQueue.TryEnqueue(() => {
+            TtsEngine.Instance.TtsEngineReady += (s, e) => this.DispatcherQueue.TryEnqueue(() => {
                 if (MixGrid.SelectedItem is MixedVoiceItem item)
                 {
                     RefreshComponents(item);
@@ -48,7 +47,6 @@ namespace JakeyTTS.MixVoices
                 else
                     ComponentsList.ItemsSource = null;
 
-                // SAFETY FIX: Ensure Bindings is not null before calling update
                 try { this.Bindings?.Update(); } catch { }
             };
         }
@@ -94,8 +92,6 @@ namespace JakeyTTS.MixVoices
             try
             {
                 var voices = KokoroVoiceManager.GetVoices(lang).Select(v => v.Name).OrderBy(n => n).ToList();
-
-                // Navigate visual tree to find the Voice ComboBox (usually Index 1 in the parent Grid)
                 if (langBox.Parent is Grid parentGrid)
                 {
                     var voiceBox = parentGrid.Children.OfType<ComboBox>().ElementAtOrDefault(1);
@@ -109,10 +105,7 @@ namespace JakeyTTS.MixVoices
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Voice population failed: {ex.Message}");
-            }
+            catch { }
         }
 
         private void AddMix_Click(object sender, RoutedEventArgs e)
@@ -146,7 +139,8 @@ namespace JakeyTTS.MixVoices
             if (MixGrid.SelectedItem is MixedVoiceItem item)
             {
                 SaveInternal();
-                await _service.ProcessAndSpeak($"[mix:{item.Name}] This is a voice mix preview.", "test");
+                // FIXED: Redirigido a TtsEngine
+                await TtsEngine.Instance.ProcessAndSpeak($"[mix:{item.Name}] This is a voice mix preview.", "test");
             }
         }
 

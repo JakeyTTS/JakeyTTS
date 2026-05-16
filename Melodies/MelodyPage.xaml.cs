@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -10,7 +10,6 @@ using Windows.Storage.Pickers;
 using WinRT.Interop;
 using System.Runtime.InteropServices;
 using JakeyTTS.Melodies;
-using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {
@@ -56,8 +55,10 @@ namespace JakeyTTS
         private async void PlayPreview_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button).Tag is Melody m)
-                // SPECIFY SCOPE: "test"
-                await TwitchService.Instance.ProcessAndSpeak($"[melody:{m.Name}] This is a melody preview test.", "test");
+            {
+                // FIXED: Redirigido de forma segura al nuevo Singleton TtsEngine
+                await TtsEngine.Instance.ProcessAndSpeak($"[melody:{m.Name}] This is a melody preview test.", "test");
+            }
         }
 
         private void Delete_Click(object sender, RoutedEventArgs e)

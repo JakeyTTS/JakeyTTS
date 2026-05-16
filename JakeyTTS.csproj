@@ -77,7 +77,6 @@
 
 	<ItemGroup>
 	  <Folder Include="Melodies\" />
-	  <Folder Include="TTS\" />
 	  <Folder Include="Twitch\" />
 	</ItemGroup>
 

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JakeyTTS.Melodies;
-using JakeyTTS.Twitch;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -63,6 +65,7 @@ namespace JakeyTTS
             }
         }
 
+        // FIXED: Cambiado de 'async Task' a 'async void' para que sea compatible con el evento Click de WinUI
         private async void Preview_Click(object sender, RoutedEventArgs e)
         {
             if (_points == null || !_points.Any()) return;
@@ -80,8 +83,9 @@ namespace JakeyTTS
             string originalName = _melody.Name;
             _melody.Name = previewName;
 
-            // Ejecutamos el test
-            await TwitchService.Instance.ProcessAndSpeak($"[melody:{previewName}] This is a preview of your new melody sound.", "test");
+            // Ejecutamos el test apuntando de forma segura a TtsEngine
+            await TtsEngine.Instance.ProcessAndSpeak($"[melody:{previewName}] This is a preview of your new melody sound.", "test");
+
             // Restauramos los valores originales (el guardado real solo ocurre en Save_Click)
             _melody.Points = originalPoints;
             _melody.Name = originalName;

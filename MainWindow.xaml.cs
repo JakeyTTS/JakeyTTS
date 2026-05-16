@@ -10,7 +10,6 @@ using Microsoft.UI.Windowing;
 using System.Runtime.InteropServices;
 using JakeyTTS.UserActions;
 using JakeyTTS.Plugins;
-using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {

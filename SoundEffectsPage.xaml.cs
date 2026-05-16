@@ -5,13 +5,12 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {
     public sealed partial class SoundEffectsPage : Page
     {
-        public ObservableCollection<SoundEffectItem> SfxList { get; set; } // <--- DEFINIDO
+        public ObservableCollection<SoundEffectItem> SfxList { get; set; }
 
         public SoundEffectsPage()
         {
@@ -48,16 +47,15 @@ namespace JakeyTTS
                 MainWindow.Instance.Log($"🎵 Imported SFX: {file.Name}");
             }
         }
+
         private async void Preview_Click(object sender, RoutedEventArgs e)
         {
-            // Extract the sound item from the button's context
             if (sender is Button btn && btn.DataContext is SoundEffectItem item)
             {
                 if (string.IsNullOrEmpty(item.TagName)) return;
 
-                // We use the existing logic in TwitchService to play it 
-                // through the correct audio devices and volume levels
-                await TwitchService.Instance.PlaySoundEffect(item.TagName);
+                // FIXED: Redirigido de forma segura al nuevo Singleton TtsEngine
+                await TtsEngine.Instance.PlaySoundEffect(item.TagName);
             }
         }
 

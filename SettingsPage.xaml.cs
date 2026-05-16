@@ -10,7 +10,6 @@ using System.Text.Json;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 using JakeyTTS.Melodies;
-using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {

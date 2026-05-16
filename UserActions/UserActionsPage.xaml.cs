@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using JakeyTTS.Twitch;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -8,6 +7,7 @@ namespace JakeyTTS.UserActions
 {
     public sealed partial class UserActionsPage : Page
     {
+        // TwitchService mantiene las colecciones de datos de la configuración de Twitch
         private readonly TwitchService _service = TwitchService.Instance;
 
         public UserActionsPage()
@@ -16,7 +16,7 @@ namespace JakeyTTS.UserActions
             this.DataContext = _service;
 
             CategorySelector.SelectionChanged += CategorySelector_SelectionChanged;
-            UpdateSubPageVisibility("Bits"); // Cargar página inicial por defecto
+            UpdateSubPageVisibility("Bits"); // Cargar subpágina inicial por defecto
         }
 
         private void CategorySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -29,15 +29,15 @@ namespace JakeyTTS.UserActions
 
         private void UpdateSubPageVisibility(string activeTag)
         {
-            if (BitsSubPage == null) return; // Validación de ciclo de vida de UI
+            if (BitsSubPage == null) return; // Validación preventiva del ciclo de vida visual de WinUI
 
-            // Resetear visibilidades de Subpáginas
+            // Alternar visibilidades de subpáginas contextuales
             BitsSubPage.Visibility = activeTag == "Bits" ? Visibility.Visible : Visibility.Collapsed;
             SubsSubPage.Visibility = activeTag == "Subs" ? Visibility.Visible : Visibility.Collapsed;
             StreaksSubPage.Visibility = activeTag == "Streaks" ? Visibility.Visible : Visibility.Collapsed;
             GoalsSubPage.Visibility = activeTag == "Goals" ? Visibility.Visible : Visibility.Collapsed;
 
-            // Resetear visibilidades de Guías de Parámetros
+            // Alternar visibilidades de guías laterales de parámetros
             GuideBitsBlock.Visibility = activeTag == "Bits" ? Visibility.Visible : Visibility.Collapsed;
             GuideSubsBlock.Visibility = activeTag == "Subs" ? Visibility.Visible : Visibility.Collapsed;
             GuideStreaksBlock.Visibility = activeTag == "Streaks" ? Visibility.Visible : Visibility.Collapsed;
@@ -48,9 +48,9 @@ namespace JakeyTTS.UserActions
         {
             if (CategorySelector.SelectedItem is not ListViewItem item || item.Tag is not string tag) return;
 
-            // Simulación nativa directa usando las cadenas de la UI
             string testUser = "JakeyViewer";
 
+            // FIXED: Todas las llamadas redirigidas de forma segura a TtsEngine.Instance
             if (tag == "Bits")
             {
                 var action = _service.Config.UserActions.BitActions.FirstOrDefault(a => a.IsEnabled);
@@ -58,7 +58,7 @@ namespace JakeyTTS.UserActions
                 {
                     string parsed = action.Response.Replace("{user}", testUser).Replace("{bits}", action.Threshold.ToString());
                     if (action.ShouldPlayUserMessage) parsed += " Cheering from Spain!";
-                    await _service.ProcessAndSpeak(parsed, "test");
+                    await TtsEngine.Instance.ProcessAndSpeak(parsed, "test");
                 }
             }
             else if (tag == "Subs")
@@ -68,7 +68,7 @@ namespace JakeyTTS.UserActions
                 {
                     string parsed = action.Response.Replace("{user}", testUser).Replace("{months}", action.Threshold.ToString());
                     if (action.ShouldPlayUserMessage) parsed += " Keep up the great streams!";
-                    await _service.ProcessAndSpeak(parsed, "test");
+                    await TtsEngine.Instance.ProcessAndSpeak(parsed, "test");
                 }
             }
             else if (tag == "Streaks")
@@ -78,7 +78,7 @@ namespace JakeyTTS.UserActions
                 {
                     string parsed = action.Response.Replace("{user}", testUser).Replace("{streak}", action.Threshold.ToString());
                     if (action.ShouldPlayUserMessage) parsed += " Best stream ever!";
-                    await _service.ProcessAndSpeak(parsed, "test");
+                    await TtsEngine.Instance.ProcessAndSpeak(parsed, "test");
                 }
             }
             else if (tag == "Goals")
@@ -86,7 +86,7 @@ namespace JakeyTTS.UserActions
                 if (!string.IsNullOrEmpty(_service.Config.UserActions.SubGoalReachedResponse))
                 {
                     string parsed = _service.Config.UserActions.SubGoalReachedResponse.Replace("{goal_title}", "Surprise 24h Stream");
-                    await _service.ProcessAndSpeak(parsed, "test");
+                    await TtsEngine.Instance.ProcessAndSpeak(parsed, "test");
                 }
             }
         }
