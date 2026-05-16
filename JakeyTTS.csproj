@@ -6,7 +6,6 @@
 		<RootNamespace>JakeyTTS</RootNamespace>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 
-		<!-- ICONO DEL EJECUTABLE (Crea un archivo app.ico en la raíz del proyecto) -->
 		<ApplicationIcon>app.ico</ApplicationIcon>
 
 		<Platforms>x64</Platforms>
@@ -16,13 +15,13 @@
 		<UseWinUI>true</UseWinUI>
 		<Nullable>enable</Nullable>
 
-		<Version>1.8.0</Version>
-		<AssemblyVersion>1.8.0.0</AssemblyVersion>
-		<FileVersion>1.8.0.0</FileVersion>
-		<ApplicationDisplayVersion>1.8.0</ApplicationDisplayVersion>
-		<ApplicationVersion>1.8.0.0</ApplicationVersion>
+		<Version>1.8.3</Version>
+		<AssemblyVersion>1.8.3.0</AssemblyVersion>
+		<FileVersion>1.8.3.0</FileVersion>
+		<ApplicationDisplayVersion>1.8.3</ApplicationDisplayVersion>
+		<ApplicationVersion>1.8.3.0</ApplicationVersion>
 
-		<!-- CONFIGURACIÓN PORTABLE (UNPACKAGED) -->
+
 		<WindowsPackageType>None</WindowsPackageType>
 		<WinUISDKReferences>true</WinUISDKReferences>
 		<EnableMsixTooling>true</EnableMsixTooling>
@@ -35,14 +34,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- Incluye el icono en la salida del build -->
+
 		<None Include="app.ico">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- INCLUIR TODOS LOS ASSETS ESCALADOS AUTOMÁTICAMENTE -->
+
 		<Content Include="Assets\**\*.png">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
@@ -60,7 +59,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- Mapeo de Voces y Modelo ONNX -->
 		<Content Include="voices\**\*.npy" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="voices\**\*.json;voices\**\*.py" CopyToOutputDirectory="PreserveNewest" />
 		<None Remove="MixVoices\MixedVoicesPage.xaml" />
@@ -79,6 +77,8 @@
 
 	<ItemGroup>
 	  <Folder Include="Melodies\" />
+	  <Folder Include="TTS\" />
+	  <Folder Include="Twitch\" />
 	</ItemGroup>
 
 	<ItemGroup>

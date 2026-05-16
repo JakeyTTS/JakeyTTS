@@ -16,131 +16,88 @@
     <Grid Margin="40">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Header -->
-            <RowDefinition Height="Auto"/>
-            <!-- Search & Filter -->
             <RowDefinition Height="*"/>
-            <!-- Cards -->
         </Grid.RowDefinitions>
 
-        <!-- HEADER -->
         <Grid Grid.Row="0" Margin="0,0,0,25">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
             <StackPanel Grid.Column="0" Margin="0,0,20,0">
-                <TextBlock Text="External Plugins &amp; Integrations" 
-                           Style="{StaticResource TitleTextBlockStyle}" 
-                           FontWeight="Bold" 
-                           TextWrapping="Wrap"/>
-
-                <HyperlinkButton Content="Learn how to build your own plugin" 
-                                 Click="BuildPlugin_Click" 
-                                 Margin="0,4,0,0"
-                                 FontSize="14"/>
+                <TextBlock Text="External Plugins &amp; Integrations" Style="{StaticResource TitleTextBlockStyle}" FontWeight="Bold"/>
+                <TextBlock Text="Server Status: Running on Port 8889" Opacity="0.5" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
-
-            <TextBlock Grid.Column="1" 
-                       Text="Server Status: Running on Port 8889" 
-                       VerticalAlignment="Top" 
-                       Opacity="0.5" 
-                       Margin="0,10,0,0" 
-                       TextWrapping="Wrap" 
-                       MaxWidth="150"/>
+            <HyperlinkButton Grid.Column="1" Content="Build your own plugin" Click="BuildPlugin_Click" VerticalAlignment="Top"/>
         </Grid>
 
-        <!-- NEW: SEARCH & FILTER BAR -->
-        <Grid Grid.Row="1" Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <TextBox x:Name="SearchBox" 
-                     PlaceholderText="Search plugins by name..." 
-                     TextChanged="SearchBox_TextChanged" 
-                     Width="300" 
-                     HorizontalAlignment="Left"/>
-
-            <ComboBox x:Name="ScopeFilterBox" 
-                      Grid.Column="1" 
-                      PlaceholderText="Filter by scope" 
-                      SelectionChanged="ScopeFilterBox_SelectionChanged" 
-                      Width="180"
-                      SelectedIndex="0">
-                <x:String>All Scopes</x:String>
-                <x:String>chat</x:String>
-                <x:String>commands</x:String>
-                <x:String>redeems</x:String>
-                <x:String>bits</x:String>
-                <x:String>subs</x:String>
-                <x:String>test</x:String>
-            </ComboBox>
-        </Grid>
-
-        <!-- PLUGIN CARDS -->
-        <ScrollViewer Grid.Row="2">
+        <ScrollViewer Grid.Row="1">
             <StackPanel Spacing="20">
 
-                <!-- EMPTY STATE (Now binds to FilteredPlugins so it shows up if a search returns 0 results) -->
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Padding="40" Margin="0,40,0,0"
-                            Visibility="{x:Bind FilteredPlugins.Count, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}">
+                <Grid x:Name="FiltersGrid" Margin="0,0,0,10"
+                      Visibility="{Binding IsBackendEmpty, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA86;" FontSize="56" Opacity="0.15" Margin="0,0,0,10"/>
-                    <TextBlock Text="No plugins match your current filters." FontWeight="SemiBold" Opacity="0.8" FontSize="18" HorizontalAlignment="Center" TextWrapping="Wrap"/>
-                    <TextBlock Text="To add a plugin, start the external application (like the Discord Bot)." Opacity="0.6" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
-                    <TextBlock Text="If you already have a plugin running, please follow its specific installation and connection process through the plugin's app so it can register here." 
-                               Opacity="0.5" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="450"/>
+                    <TextBox x:Name="SearchBox" PlaceholderText="Search plugins by name..." TextChanged="SearchBox_TextChanged" Width="300" HorizontalAlignment="Left"/>
+                    <ComboBox x:Name="ScopeFilterBox" Grid.Column="1" SelectionChanged="ScopeFilterBox_SelectionChanged" Width="180" SelectedIndex="0" Margin="10,0,0,0">
+                        <x:String>All Scopes</x:String>
+                        <x:String>chat</x:String>
+                        <x:String>commands</x:String>
+                        <x:String>redeems</x:String>
+                        <x:String>bits</x:String>
+                        <x:String>subs</x:String>
+                        <x:String>test</x:String>
+                    </ComboBox>
+                </Grid>
+
+                <StackPanel HorizontalAlignment="Center" Spacing="15" Padding="20,60"
+                            Visibility="{Binding ShowInstructions, Converter={StaticResource NullToVisibilityConverter}}">
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA86;" FontSize="68" Opacity="0.15" Margin="0,0,0,10"/>
+                    <TextBlock Text="No Plugins Found" FontWeight="Bold" FontSize="28" HorizontalAlignment="Center"/>
+                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="12" Padding="30" MaxWidth="550">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="1. Start an external plugin (e.g. Discord Bridge)"/>
+                            <TextBlock Text="2. Ensure it connects to ws://localhost:8889"/>
+                            <TextBlock Text="3. Authorize it here when it appears"/>
+                        </StackPanel>
+                    </Border>
+                    <HyperlinkButton Content="Follow the Plugin Development Guide" Click="BuildPlugin_Click" HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- GRID OF PLUGINS (Now binds to FilteredPlugins) -->
+                <StackPanel HorizontalAlignment="Center" Spacing="10" Padding="0,60"
+                            Visibility="{Binding ShowNoResults, Converter={StaticResource NullToVisibilityConverter}}">
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE11A;" FontSize="48" Opacity="0.2"/>
+                    <TextBlock Text="No results match your search" FontSize="20" FontWeight="SemiBold" Opacity="0.6" HorizontalAlignment="Center"/>
+                </StackPanel>
+
                 <GridView ItemsSource="{x:Bind FilteredPlugins, Mode=OneWay}" SelectionMode="None">
                     <GridView.ItemTemplate>
                         <DataTemplate x:DataType="models:PluginItem">
-                            <Border Width="320" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                    BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,15,15">
+                            <Border Width="320" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,15,15">
                                 <StackPanel Spacing="15">
-
-                                    <!-- Top Header: Icon, Name, Version, Toggle -->
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-
-                                        <!-- Icon Setup -->
-                                        <Grid Width="42" Height="42" CornerRadius="8" Background="{ThemeResource ControlFillColorDefaultBrush}" VerticalAlignment="Top">
-
-                                            <Image Source="{x:Bind IconBase64, Converter={StaticResource Base64ToImageConverter}, Mode=OneWay}" 
-                                                   Stretch="Uniform" Margin="4"/>
-
-                                            <!-- The puzzle icon will now show if IconBase64 is null OR "" -->
+                                        <Grid Width="42" Height="42" CornerRadius="8" Background="{ThemeResource ControlFillColorDefaultBrush}">
+                                            <Image Source="{x:Bind IconBase64, Converter={StaticResource Base64ToImageConverter}, Mode=OneWay}" Stretch="Uniform" Margin="4"/>
                                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA86;" FontSize="20" Opacity="0.2"
                                                       Visibility="{x:Bind IconBase64, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse, Mode=OneWay}"/>
                                         </Grid>
-
-                                        <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{x:Bind Version, Mode=OneWay}" Opacity="0.5" FontSize="12" TextWrapping="Wrap"/>
+                                        <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{x:Bind Version, Mode=OneWay}" Opacity="0.5" FontSize="11"/>
                                         </StackPanel>
-
-                                        <ToggleSwitch Grid.Column="2" 
-                                                      IsOn="{Binding IsEnabled, Mode=TwoWay}" 
-                                                      Toggled="PluginToggle_Toggled" 
-                                                      VerticalAlignment="Center" 
-                                                      HorizontalAlignment="Center"
-                                                      OnContent="" OffContent="" MinWidth="0" Margin="0,0,-10,0"
-                                                      ToolTipService.ToolTip="Allow Access"/>
+                                        <ToggleSwitch Grid.Column="2" IsOn="{Binding IsEnabled, Mode=TwoWay}" Toggled="PluginToggle_Toggled" OnContent="" OffContent="" MinWidth="0"/>
                                     </Grid>
 
-                                    <!-- Requested Scopes -->
-                                    <StackPanel Spacing="8" Margin="0,5,0,5">
-                                        <TextBlock Text="Requested Access:" FontSize="12" Opacity="0.6" TextWrapping="Wrap"/>
-
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Requested Scopes:" FontSize="11" Opacity="0.6"/>
                                         <ItemsControl ItemsSource="{x:Bind Subscriptions, Mode=OneWay}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -149,22 +106,20 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="x:String">
-                                                    <Border Background="{ThemeResource SystemAccentColorDark2}" CornerRadius="4" Padding="6,2" Margin="0,0,5,5">
-                                                        <TextBlock Text="{x:Bind}" FontSize="11" Foreground="White" TextWrapping="Wrap"/>
+                                                    <Border Background="{ThemeResource SystemAccentColorDark2}" CornerRadius="4" Padding="6,2" Margin="0,0,4,4">
+                                                        <TextBlock Text="{x:Bind}" FontSize="10" Foreground="White"/>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
 
-                                    <!-- Footer Button -->
-                                    <Button HorizontalAlignment="Stretch" Click="DeletePlugin_Click" Padding="8" Background="Transparent" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <FontIcon Glyph="&#xE74D;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="14"/>
-                                            <TextBlock Text="Revoke &amp; Delete" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
+                                    <HyperlinkButton Click="DeletePlugin_Click" HorizontalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                            <TextBlock Text="Remove Integration" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </StackPanel>
-                                    </Button>
-
+                                    </HyperlinkButton>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>

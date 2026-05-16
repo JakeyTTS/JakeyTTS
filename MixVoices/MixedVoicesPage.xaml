@@ -21,7 +21,6 @@
             <ColumnDefinition Width="450"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT PANEL: Library -->
         <Grid Grid.Column="0" Margin="0,0,30,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -46,36 +45,21 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
-                                    <!-- Icon -->
                                     <RowDefinition Height="Auto"/>
-                                    <!-- Name -->
                                     <RowDefinition Height="Auto"/>
-                                    <!-- Tag -->
                                     <RowDefinition Height="Auto"/>
-                                    <!-- Toggle -->
                                     <RowDefinition Height="*"/>
-                                    <!-- Spacer -->
                                     <RowDefinition Height="Auto"/>
-                                    <!-- Delete Button -->
                                 </Grid.RowDefinitions>
 
-                                <!-- 1. Icon on top -->
                                 <FontIcon Glyph="&#xE77B;" Foreground="MediumOrchid" FontSize="28" Margin="0,0,0,10" HorizontalAlignment="Center"/>
-
-                                <!-- 2. Name -->
                                 <TextBlock Grid.Row="1" Text="{x:Bind Name, Mode=OneWay}" FontWeight="Bold" 
                                            HorizontalAlignment="Center" TextAlignment="Center" MaxLines="1" TextWrapping="NoWrap"/>
-
-                                <!-- 3. Usage Tag -->
                                 <TextBlock Grid.Row="2" Text="{x:Bind Name, Mode=OneWay, Converter={StaticResource TagPreviewConverter}}" 
                                            Foreground="MediumOrchid" HorizontalAlignment="Center" FontSize="11" FontWeight="SemiBold" Opacity="0.8"/>
-
-                                <!-- 4. Toggle below Name/Tag -->
                                 <ToggleSwitch Grid.Row="3" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" 
                                               OnContent="Active" OffContent="Disabled" 
                                               FontSize="11" MinWidth="0" HorizontalAlignment="Center" Margin="0,8,0,0"/>
-
-                                <!-- 5. Delete Action at the bottom -->
                                 <Button Grid.Row="5" Click="DeleteMix_Click" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Padding="8,4">
                                     <FontIcon Glyph="&#xE74D;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="14"/>
                                 </Button>
@@ -86,19 +70,18 @@
             </GridView>
         </Grid>
 
-        <!-- RIGHT PANEL: Editor -->
-        <Border Grid.Column="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="12" Padding="0" 
+        <Border Grid.Column="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="12" 
                 BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
             <Grid>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Padding="24"
-                            Visibility="{Binding SelectedItem, ElementName=MixGrid, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}">
+                            Visibility="{Binding SelectedItem, ElementName=MixGrid, Converter={StaticResource NullToVisibilityConverter}}">
                     <Viewbox Width="48" Height="48" Opacity="0.2">
                         <SymbolIcon Symbol="Edit"/>
                     </Viewbox>
                     <TextBlock Text="Select a voice to modify its components." Opacity="0.5" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="250"/>
                 </StackPanel>
 
-                <Grid Visibility="{Binding SelectedItem, ElementName=MixGrid, Converter={StaticResource NullToVisibilityConverter}}">
+                <Grid Visibility="{Binding SelectedItem, ElementName=MixGrid, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
@@ -136,7 +119,6 @@
                                                               Loaded="LanguageBox_Loaded"
                                                               SelectionChanged="ComponentLanguage_Changed"/>
 
-                                                    <!-- Voice Selection: Initialized by Loaded event to prevent blank selection -->
                                                     <ComboBox Grid.Column="1" Header="Voice" HorizontalAlignment="Stretch"
                                                               SelectedItem="{x:Bind VoiceName, Mode=TwoWay}"/>
 

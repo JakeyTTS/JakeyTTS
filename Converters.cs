@@ -64,27 +64,26 @@ namespace JakeyTTS.Converters
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            // 1. Check if the value is null OR an empty string
-            bool isNullOrEmpty = value == null || (value is string str && string.IsNullOrWhiteSpace(str));
+            bool isConditionMet;
 
-            // 2. Check if we passed "Inverse" in the XAML parameter
+            if (value is bool b)
+                isConditionMet = b;
+            else if (value is string str)
+                isConditionMet = string.IsNullOrWhiteSpace(str);
+            else if (value is int i)
+                isConditionMet = i == 0;
+            else
+                isConditionMet = (value == null); // For SelectedItem
+
             bool isInverse = parameter?.ToString() == "Inverse";
 
-            // 3. Return the correct visibility
             if (isInverse)
-            {
-                return isNullOrEmpty ? Visibility.Visible : Visibility.Collapsed;
-            }
+                return isConditionMet ? Visibility.Collapsed : Visibility.Visible;
             else
-            {
-                return isNullOrEmpty ? Visibility.Collapsed : Visibility.Visible;
-            }
+                return isConditionMet ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, string language)
-        {
-            throw new NotImplementedException();
-        }
+        public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotImplementedException();
     }
 
     public class MelodyToPointCollectionConverter : IValueConverter

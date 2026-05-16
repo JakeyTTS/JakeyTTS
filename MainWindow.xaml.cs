@@ -10,6 +10,7 @@ using Microsoft.UI.Windowing;
 using System.Runtime.InteropServices;
 using JakeyTTS.UserActions;
 using JakeyTTS.Plugins;
+using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {
@@ -112,7 +113,7 @@ namespace JakeyTTS
             if (item?.Tag == null) return;
 
             string tag = item.Tag.ToString();
-            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag=="UserActions" || tag == "Plugins") ? null : item.Content;
+            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag== "UserActions" || tag == "Plugins" || tag == "Keybinds") ? null : item.Content;
 
             switch (tag)
             {
@@ -176,17 +177,21 @@ namespace JakeyTTS
 
         private void LogToggle_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
-            FontIcon icon = new FontIcon();
-            icon.Glyph = "\uEBE8";
             if (LogRow.Height.Value > 0)
             {
+                // Collapse
                 LogRow.Height = new GridLength(0);
                 LogBorder.Visibility = Visibility.Collapsed;
                 LogToggleBtn.Content = "Show Log";
-                LogToggleBtn.Icon = icon;
+
+                FontIcon showIcon = new FontIcon();
+                showIcon.FontFamily = new FontFamily("Segoe Fluent Icons");
+                showIcon.Glyph = "\uEBE8"; // List icon
+                LogToggleBtn.Icon = showIcon;
             }
             else
             {
+                // Expand
                 LogRow.Height = new GridLength(150);
                 LogBorder.Visibility = Visibility.Visible;
                 LogToggleBtn.Content = "Hide Log";

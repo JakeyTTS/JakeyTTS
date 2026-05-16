@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using JakeyTTS;
+using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {
@@ -68,17 +68,35 @@ namespace JakeyTTS
 
         private async Task HandleClientAsync(WebSocket webSocket)
         {
-            var buffer = new byte[1024 * 64]; // 64KB buffer for base64 icons
+            // Use a smaller chunk buffer for receiving fragments
+            var chunkBuffer = new byte[1024 * 8];
             string pluginId = string.Empty;
 
             try
             {
                 while (webSocket.State == WebSocketState.Open)
                 {
-                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    if (result.MessageType == WebSocketMessageType.Close) break;
+                    // MemoryStream accumulates the full message until EndOfMessage is true
+                    using var ms = new MemoryStream();
+                    WebSocketReceiveResult result;
 
-                    string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    do
+                    {
+                        result = await webSocket.ReceiveAsync(new ArraySegment<byte>(chunkBuffer), CancellationToken.None);
+
+                        if (result.MessageType == WebSocketMessageType.Close)
+                        {
+                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                            return;
+                        }
+
+                        ms.Write(chunkBuffer, 0, result.Count);
+                    } while (!result.EndOfMessage); // Wait for the complete JSON packet
+
+                    // Convert the full accumulated stream to a string
+                    string message = Encoding.UTF8.GetString(ms.ToArray());
+                    if (string.IsNullOrWhiteSpace(message)) continue;
+
                     using var doc = JsonDocument.Parse(message);
                     var root = doc.RootElement;
                     string type = root.GetProperty("type").GetString() ?? "";
@@ -88,30 +106,58 @@ namespace JakeyTTS
                     {
                         var payload = root.GetProperty("payload");
                         pluginId = payload.GetProperty("id").GetString()!;
-
                         _activeClients[pluginId] = webSocket;
                         HandleRegistration(payload);
                     }
-                    // 2. TTS REQUEST (External program requesting custom audio)
-                    else if (type == "tts_request")
+                    // 2. SILENT TTS REQUEST (For /file and /speak commands)
+                    // Changing speak_request to use HandleTtsRequest prevents it from playing on your PC speakers
+                    else if (type == "tts_request" || type == "speak_request")
                     {
                         if (IsPluginEnabled(pluginId))
                         {
+                            // By using HandleTtsRequest, we use SynthesizeSilentAsync which skips local speakers
                             await HandleTtsRequest(pluginId, root, webSocket);
                         }
                         else
                         {
-                            await SendJsonAsync(webSocket, new { type = "error", message = "Plugin is disabled pending user approval." });
+                            await SendJsonAsync(webSocket, new { type = "error", message = "Plugin not approved." });
                         }
                     }
                 }
             }
-            catch (Exception) { /* Client disconnected forcefully */ }
+            catch (Exception ex)
+            {
+                MainWindow.Instance?.Log($"🔌 WebSocket Client Disconnected: {ex.Message}");
+            }
             finally
             {
                 if (!string.IsNullOrEmpty(pluginId)) _activeClients.TryRemove(pluginId, out _);
                 if (webSocket.State != WebSocketState.Closed)
-                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+                    webSocket.Dispose();
+            }
+        }
+
+        private async Task HandleTtsRequest(string pluginId, JsonElement root, WebSocket ws)
+        {
+            // The bridge sends a request_id so it knows which response matches which command
+            string reqId = root.TryGetProperty("request_id", out var idProp) ? idProp.GetString()! : Guid.NewGuid().ToString();
+            var payload = root.GetProperty("payload");
+            string text = payload.GetProperty("text").GetString()!;
+
+            // Use the streamer's default voice
+            string voice = TwitchService.Instance.Config.DefaultVoice;
+
+            // Synthesize WITHOUT playing to speakers
+            byte[]? wavData = await TwitchService.Instance.SynthesizeSilentAsync(text, voice);
+
+            if (wavData != null)
+            {
+                await SendJsonAsync(ws, new
+                {
+                    type = "tts_response",
+                    request_id = reqId,
+                    payload = new { audio_base64 = Convert.ToBase64String(wavData) }
+                });
             }
         }
 
@@ -177,28 +223,6 @@ namespace JakeyTTS
             return TwitchService.Instance.Config.Plugins?.Any(p => p.Id == id && p.IsEnabled) ?? false;
         }
 
-        private async Task HandleTtsRequest(string pluginId, JsonElement root, WebSocket ws)
-        {
-            string reqId = root.GetProperty("request_id").GetString()!;
-            var payload = root.GetProperty("payload");
-            string text = payload.GetProperty("text").GetString()!;
-            string voice = payload.GetProperty("voice").GetString()!;
-            float speed = payload.TryGetProperty("speed", out var s) ? (float)s.GetDouble() : 1.0f;
-
-            // Generate Audio bytes silently (bypassing speakers)
-            byte[]? wavData = await TwitchService.Instance.SynthesizeSilentAsync(text, voice, speed);
-
-            if (wavData != null)
-            {
-                string base64Audio = Convert.ToBase64String(wavData);
-                await SendJsonAsync(ws, new
-                {
-                    type = "tts_response",
-                    request_id = reqId,
-                    payload = new { audio_base64 = base64Audio }
-                });
-            }
-        }
 
         /// <summary>
         /// Broadcasts generated TTS audio to all connected and approved plugins that are subscribed to the specific scope.

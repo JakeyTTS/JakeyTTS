@@ -23,7 +23,7 @@ using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 
-namespace JakeyTTS
+namespace JakeyTTS.Twitch
 {
     public class TwitchService
     {
@@ -53,7 +53,6 @@ namespace JakeyTTS
             SetupAndLoadTTS();
             MelodyService.Instance.Initialize();
 
-            // Iniciar el servidor de Plugins WebSocket
             PluginServer.Instance.Start();
         }
 
@@ -232,7 +231,6 @@ namespace JakeyTTS
 
         #region TTS Engine & Tag Handler
 
-        // 1. AÑADIDO: Método silencioso para uso del PluginServer (Peticiones directas)
         public async Task<byte[]?> SynthesizeSilentAsync(string text, string voiceName, float speed = 1.0f)
         {
             if (Synthesizer == null || string.IsNullOrWhiteSpace(text)) return null;
@@ -256,7 +254,6 @@ namespace JakeyTTS
             }
         }
 
-        // 2. MODIFICADO: Ahora acepta el 'scope' y hace el Broadcast
         public async Task ProcessAndSpeak(string input, string scope = "chat")
         {
             if (Synthesizer == null || string.IsNullOrWhiteSpace(input)) return;
@@ -314,7 +311,6 @@ namespace JakeyTTS
                         if (currentEcho > 0) wavData = ApplyEchoEffect(wavData, currentEcho);
                         if (currentReverse) wavData = ReverseAudio(wavData);
 
-                        // BROADCAST: Now using the correct scope (e.g., "test")
                         _ = PluginServer.Instance.BroadcastEventAsync(scope, segment, wavData);
 
                         await PlayWavData(wavData, currentVolume, currentPitch, currentMelody);
@@ -359,40 +355,121 @@ namespace JakeyTTS
 
         #region User Actions Logic
 
+        #region User Actions Logic
+
         private async Task HandleCheer(object? s, ChannelCheerArgs e)
         {
             var ev = e.Payload.Event;
-            var action = Config.UserActions?.BitActions?.Where(a => a.IsEnabled && ev.Bits >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
+            if (Config.UserActions?.BitActions == null) return;
+
+            var action = Config.UserActions.BitActions
+                .Where(a => a.IsEnabled && ev.Bits >= a.Threshold)
+                .OrderByDescending(a => a.Threshold)
+                .FirstOrDefault();
+
             if (action != null)
             {
-                string res = action.Response.Replace("{user}", ev.UserName).Replace("{bits}", ev.Bits.ToString());
+                string res = action.Response
+                    .Replace("{user}", ev.UserName, StringComparison.OrdinalIgnoreCase)
+                    .Replace("{bits}", ev.Bits.ToString(), StringComparison.OrdinalIgnoreCase);
+
                 AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
-                await ProcessAndSpeak($"{res} {ev.Message}", "bits"); // AÑADIDO SCOPE
+
+                // Hablar la alerta inicial con las propiedades estéticas del streamer
+                await ProcessAndSpeak(res, "bits");
+
+                // Si se debe leer el mensaje del usuario, limpiamos sus etiquetas y aplicamos el reset
+                if (action.ShouldPlayUserMessage && !string.IsNullOrWhiteSpace(ev.Message))
+                {
+                    // SANITIZACIÓN: Elimina cualquier corchete [...] que haya escrito el usuario
+                    string cleanUserMessage = Regex.Replace(ev.Message, @"\[.*?\]", "").Trim();
+
+                    if (!string.IsNullOrWhiteSpace(cleanUserMessage))
+                    {
+                        // Forzamos el reinicio de audio y la pausa intermedia de 500ms
+                        await ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "bits");
+                    }
+                }
             }
         }
 
         private async Task HandleSubscriptionMessage(object? s, ChannelSubscriptionMessageArgs e)
         {
             var ev = e.Payload.Event;
-            var streakAction = Config.UserActions?.StreakActions?.Where(a => a.IsEnabled && ev.StreakMonths >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
-            var subAction = Config.UserActions?.SubActions?.Where(a => a.IsEnabled && ev.CumulativeMonths >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
+            if (Config.UserActions == null) return;
+
+            int cumulativeMonths = ev.CumulativeMonths;
+            int? streakMonths = ev.StreakMonths;
+
+            var streakAction = Config.UserActions.StreakActions?
+                .Where(a => a.IsEnabled && streakMonths >= a.Threshold)
+                .OrderByDescending(a => a.Threshold)
+                .FirstOrDefault();
+
+            var subAction = Config.UserActions.SubActions?
+                .Where(a => a.IsEnabled && cumulativeMonths >= a.Threshold)
+                .OrderByDescending(a => a.Threshold)
+                .FirstOrDefault();
 
             string response = "{user} subscribed for {months} months!";
-            if (streakAction != null) response = streakAction.Response;
-            else if (subAction != null) response = subAction.Response;
+            bool shouldPlayText = true;
 
-            string finalMsg = response.Replace("{user}", ev.UserName).Replace("{months}", ev.CumulativeMonths.ToString()).Replace("{streak}", ev.StreakMonths.ToString());
+            if (streakAction != null)
+            {
+                response = streakAction.Response;
+                shouldPlayText = streakAction.ShouldPlayUserMessage;
+            }
+            else if (subAction != null)
+            {
+                response = subAction.Response;
+                shouldPlayText = subAction.ShouldPlayUserMessage;
+            }
+
+            string finalMsg = response
+                .Replace("{user}", ev.UserName, StringComparison.OrdinalIgnoreCase)
+                .Replace("{months}", cumulativeMonths.ToString(), StringComparison.OrdinalIgnoreCase)
+                .Replace("{streak}", streakMonths.ToString(), StringComparison.OrdinalIgnoreCase);
+
             AddToHistory(ev.UserName, "Subscription", "Sub");
-            await ProcessAndSpeak($"{finalMsg} {ev.Message.Text}", "subs"); // AÑADIDO SCOPE
-        }
 
+            await ProcessAndSpeak(finalMsg, "subs");
+
+            string userWrittenText = ev.Message?.Text;
+            if (shouldPlayText && !string.IsNullOrWhiteSpace(userWrittenText))
+            {
+                string cleanUserMessage = Regex.Replace(userWrittenText, @"\[.*?\]", "").Trim();
+
+                if (!string.IsNullOrWhiteSpace(cleanUserMessage))
+                {
+                    await ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "subs");
+                }
+            }
+        }
         private async Task HandleGoalProgress(object? s, ChannelGoalProgressArgs e)
         {
             var ev = e.Payload.Event;
-            if (ev.CurrentAmount >= ev.TargetAmount && !string.IsNullOrEmpty(Config.UserActions?.SubGoalReachedResponse))
+
+            if (ev.CurrentAmount >= ev.TargetAmount && Config.UserActions != null)
             {
-                string msg = Config.UserActions.SubGoalReachedResponse.Replace("{goal_title}", ev.Description);
-                await ProcessAndSpeak(msg, "goals"); // AÑADIDO SCOPE
+                string goalType = ev.Type.ToLowerInvariant();
+                string responseTemplate = "";
+
+                if (goalType.Contains("sub"))
+                    responseTemplate = Config.UserActions.SubGoalReachedResponse;
+                else if (goalType.Contains("follow"))
+                    responseTemplate = Config.UserActions.FollowerGoalReachedResponse;
+                else if (goalType.Contains("bit"))
+                    responseTemplate = Config.UserActions.BitsGoalReachedResponse;
+                else if (goalType.Contains("point"))
+                    responseTemplate = Config.UserActions.PointsGoalReachedResponse;
+                else
+                    responseTemplate = "Goal {goal_title} completed!";
+
+                if (!string.IsNullOrEmpty(responseTemplate))
+                {
+                    string msg = responseTemplate.Replace("{goal_title}", ev.Description, StringComparison.OrdinalIgnoreCase);
+                    await ProcessAndSpeak(msg, "goals");
+                }
             }
         }
         #endregion
@@ -447,13 +524,13 @@ namespace JakeyTTS
                 string res = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger);
                 if (cmd.ShouldReplyInChat) await SendChatReply(res, cmd.ReplyAsBot);
                 AddToHistory(ev.ChatterUserName, res, "Command");
-                if (cmd.ShouldSpeak) await ProcessAndSpeak(res, "commands"); // AÑADIDO SCOPE
+                if (cmd.ShouldSpeak) await ProcessAndSpeak(res, "commands");
             }
             else if (Config.ReadChatEnabled)
             {
                 if (ev.ChatterUserId == Config.BroadcasterId && !Config.TestModeActive) return;
                 AddToHistory(ev.ChatterUserName, msg, "Chat");
-                await ProcessAndSpeak(msg, "chat"); // AÑADIDO SCOPE
+                await ProcessAndSpeak(msg, "chat");
             }
         }
 
@@ -464,7 +541,7 @@ namespace JakeyTTS
             if (redeemConfig != null && redeemConfig.IsEnabled)
             {
                 string msg = ev.UserInput ?? "";
-                if (!string.IsNullOrWhiteSpace(msg)) { AddToHistory(ev.UserName, msg, "Reward"); await ProcessAndSpeak(msg, "redeems"); } // AÑADIDO SCOPE
+                if (!string.IsNullOrWhiteSpace(msg)) { AddToHistory(ev.UserName, msg, "Reward"); await ProcessAndSpeak(msg, "redeems"); }
             }
         }
 
@@ -542,7 +619,7 @@ namespace JakeyTTS
         }
 
         public void StopCurrentTTS() => _cts?.Cancel();
-        public void LogUI(string m) => MainWindow.Instance?.Log(m); // Hecho publico para acceso desde PluginServer
+        public void LogUI(string m) => MainWindow.Instance?.Log(m);
         private void AddToHistory(string u, string m, string source) =>
             MainWindow.Instance?.DispatcherQueue?.TryEnqueue(() => {
                 History.Insert(0, new TtsEntry(u, m, DateTime.Now.ToString("HH:mm:ss"), source));
@@ -578,4 +655,5 @@ namespace JakeyTTS
             }
         }
     }
+        #endregion
 }

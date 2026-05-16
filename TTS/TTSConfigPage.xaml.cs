@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KokoroSharp;
 using KokoroSharp.Core;
+using JakeyTTS.Twitch;
 
 namespace JakeyTTS
 {

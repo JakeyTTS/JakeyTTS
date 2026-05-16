@@ -10,10 +10,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
             <RowDefinition Height="*"/>
-            <RowDefinition x:Name="LogRow" Height="150"/>
+            <RowDefinition x:Name="LogRow" Height="0"/>
         </Grid.RowDefinitions>
 
-        <!-- CUSTOM TITLE BAR -->
         <Grid x:Name="AppTitleBar" Grid.Row="0" VerticalAlignment="Stretch">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                 <Image Source="ms-appx:///app.ico" Width="20" Height="20" Margin="0,0,12,0" Stretch="Uniform"/>
@@ -22,7 +21,6 @@
             </StackPanel>
         </Grid>
 
-        <!-- NAVIGATION -->
         <NavigationView x:Name="NavView" 
                         Grid.Row="1"
                         PaneDisplayMode="Left"
@@ -31,14 +29,11 @@
                         ItemInvoked="NavView_ItemInvoked">
 
             <NavigationView.MenuItems>
-                <!-- Standard icons can still use the shorthand -->
                 <NavigationViewItem Content="Home" Tag="Home" Icon="Home"/>
                 <NavigationViewItem Content="TTS Settings" Tag="TTSConfig" Icon="People"/>
 
-                <!-- New icons require the FontIcon syntax -->
                 <NavigationViewItem Content="User Actions" Tag="UserActions">
                     <NavigationViewItem.Icon>
-                        <!-- Contact2 Icon -->
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA4A;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
@@ -55,7 +50,6 @@
                 </NavigationViewItem>
                 <NavigationViewItem Content="Redeems" Tag="Rewards" Icon="OutlineStar"/>
 
-                <!-- New MusicInfo Icon -->
                 <NavigationViewItem Content="Melodies" Tag="Melodies">
                     <NavigationViewItem.Icon>
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8D6;"/>
@@ -73,7 +67,6 @@
 
                 <NavigationViewItem Content="Keybinds" Tag="Keybinds" Icon="Keyboard"/>
 
-                <!-- New Puzzle (Extension) Icon -->
                 <NavigationViewItem Content="Plugins &amp; Integrations" Tag="Plugins">
                     <NavigationViewItem.Icon>
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEA86;"/>
@@ -82,16 +75,19 @@
             </NavigationView.MenuItems>
 
             <NavigationView.PaneFooter>
-                <NavigationViewItem x:Name="LogToggleBtn" Content="Hide Log" Icon="List" 
-                                    SelectsOnInvoked="False" Tapped="LogToggle_Tapped"/>
+                <NavigationViewItem x:Name="LogToggleBtn" Content="Show Log" 
+                                    SelectsOnInvoked="False" Tapped="LogToggle_Tapped">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEBE8;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.PaneFooter>
 
             <Frame x:Name="ContentFrame" Margin="24,0,24,0"/>
         </NavigationView>
 
-        <!-- LOG CONSOLE -->
         <Border x:Name="LogBorder" Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Visibility="Collapsed">
             <Grid Padding="12">
                 <ScrollViewer x:Name="LogScroll">
                     <TextBox x:Name="LogBlock" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"

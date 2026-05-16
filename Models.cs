@@ -108,24 +108,36 @@ namespace JakeyTTS
 
     public class UserActionItem : BaseNotify
     {
-        private int _threshold = 0;
-        public int Threshold { get => _threshold; set { _threshold = value; OnPropertyChanged(); } }
+        private double _threshold = 0;
+        public double Threshold { get => _threshold; set { _threshold = value; OnPropertyChanged(); } }
 
         private string _response = "";
         public string Response { get => _response; set { _response = value; OnPropertyChanged(); } }
 
         private bool _isEnabled = true;
         public bool IsEnabled { get => _isEnabled; set { _isEnabled = value; OnPropertyChanged(); } }
+
+        private bool _shouldPlayUserMessage = true;
+        public bool ShouldPlayUserMessage { get => _shouldPlayUserMessage; set { _shouldPlayUserMessage = value; OnPropertyChanged(); } }
     }
 
     public class UserActionsConfig : BaseNotify
     {
         public ObservableCollection<UserActionItem> BitActions { get; set; } = new();
-        public ObservableCollection<UserActionItem> SubActions { get; set; } = new(); // Total months
-        public ObservableCollection<UserActionItem> StreakActions { get; set; } = new(); // Current Streak
+        public ObservableCollection<UserActionItem> SubActions { get; set; } = new();
+        public ObservableCollection<UserActionItem> StreakActions { get; set; } = new();
 
         private string _subGoalReachedResponse = "Goal reached! {goal_title}";
         public string SubGoalReachedResponse { get => _subGoalReachedResponse; set { _subGoalReachedResponse = value; OnPropertyChanged(); } }
+
+        private string _followerGoalReachedResponse = "We reached our follower goal! {goal_title}";
+        public string FollowerGoalReachedResponse { get => _followerGoalReachedResponse; set { _followerGoalReachedResponse = value; OnPropertyChanged(); } }
+
+        private string _bitsGoalReachedResponse = "Bits goal completed! {goal_title}";
+        public string BitsGoalReachedResponse { get => _bitsGoalReachedResponse; set { _bitsGoalReachedResponse = value; OnPropertyChanged(); } }
+
+        private string _pointsGoalReachedResponse = "Channel Points goal completed! {goal_title}";
+        public string PointsGoalReachedResponse { get => _pointsGoalReachedResponse; set { _pointsGoalReachedResponse = value; OnPropertyChanged(); } }
     }
 
 

@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using KokoroSharp;
 using KokoroSharp.Core;
+using JakeyTTS.Twitch;
 
 namespace JakeyTTS.MixVoices
 {
@@ -31,18 +32,13 @@ namespace JakeyTTS.MixVoices
             this.InitializeComponent();
             Languages = _languageMap.Keys.ToList();
 
-            // Load saved configurations
             MixList = new ObservableCollection<MixedVoiceItem>(_service.Config.MixedVoices ?? new());
             MixGrid.ItemsSource = MixList;
 
-            // Handle background engine completion
             _service.TtsEngineReady += (s, e) => this.DispatcherQueue.TryEnqueue(() => {
                 if (MixGrid.SelectedItem is MixedVoiceItem item)
                 {
-                    // Force refresh components list to reload voice ComboBoxes
-                    var current = item.Components;
-                    ComponentsList.ItemsSource = null;
-                    ComponentsList.ItemsSource = current;
+                    RefreshComponents(item);
                 }
             });
 
@@ -51,20 +47,26 @@ namespace JakeyTTS.MixVoices
                     ComponentsList.ItemsSource = item.Components;
                 else
                     ComponentsList.ItemsSource = null;
+
+                // SAFETY FIX: Ensure Bindings is not null before calling update
+                try { this.Bindings?.Update(); } catch { }
             };
         }
 
-        /// <summary>
-        /// Populates the voice list immediately when the UI loads to prevent blank selections.
-        /// </summary>
+        private void RefreshComponents(MixedVoiceItem item)
+        {
+            var current = item.Components;
+            ComponentsList.ItemsSource = null;
+            ComponentsList.ItemsSource = current;
+        }
+
         private void LanguageBox_Loaded(object sender, RoutedEventArgs e)
         {
             if (sender is ComboBox langBox && langBox.DataContext is VoiceWeight weight)
             {
-                // Safely identify the language from the voice name prefix
                 string voiceName = weight.VoiceName ?? "";
                 string voicePrefix = voiceName.Split('_').FirstOrDefault()?.ToLower();
-                string identifiedLang = "English (US)"; // Default
+                string identifiedLang = "English (US)";
 
                 if (voicePrefix == "es") identifiedLang = "Spanish";
                 else if (voicePrefix == "af" || voicePrefix == "am") identifiedLang = "English (US)";
@@ -73,8 +75,6 @@ namespace JakeyTTS.MixVoices
                 else if (voicePrefix == "jf" || voicePrefix == "jm") identifiedLang = "Japanese";
 
                 langBox.SelectedItem = identifiedLang;
-
-                // Force initial population of the voice sibling ComboBox
                 PopulateVoiceList(langBox, identifiedLang, voiceName);
             }
         }
@@ -87,9 +87,6 @@ namespace JakeyTTS.MixVoices
             }
         }
 
-        /// <summary>
-        /// Robust helper to find and populate the Voice selection ComboBox.
-        /// </summary>
         private void PopulateVoiceList(ComboBox langBox, string langName, string currentVoice = null)
         {
             if (!_languageMap.TryGetValue(langName, out var lang)) return;
@@ -98,15 +95,13 @@ namespace JakeyTTS.MixVoices
             {
                 var voices = KokoroVoiceManager.GetVoices(lang).Select(v => v.Name).OrderBy(n => n).ToList();
 
-                // Use the visual tree parent safely
+                // Navigate visual tree to find the Voice ComboBox (usually Index 1 in the parent Grid)
                 if (langBox.Parent is Grid parentGrid)
                 {
                     var voiceBox = parentGrid.Children.OfType<ComboBox>().ElementAtOrDefault(1);
                     if (voiceBox != null)
                     {
                         voiceBox.ItemsSource = voices;
-
-                        // Select current voice or first available
                         if (!string.IsNullOrEmpty(currentVoice) && voices.Contains(currentVoice))
                             voiceBox.SelectedItem = currentVoice;
                         else if (voices.Any())
@@ -116,36 +111,28 @@ namespace JakeyTTS.MixVoices
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error populating voices: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Voice population failed: {ex.Message}");
             }
         }
 
         private void AddMix_Click(object sender, RoutedEventArgs e)
         {
-            // Use the App default voice as the starting point
             string defaultVoice = _service.Config.DefaultVoice ?? "af_bella";
-
             var newItem = new MixedVoiceItem
             {
                 Name = "Hybrid_" + (MixList.Count + 1),
                 IsEnabled = true,
                 Components = new ObservableCollection<VoiceWeight>()
             };
-
             newItem.Components.Add(new VoiceWeight { VoiceName = defaultVoice, Weight = 1.0f });
-
             MixList.Insert(0, newItem);
             MixGrid.SelectedItem = newItem;
         }
 
         private void DeleteMix_Click(object sender, RoutedEventArgs e)
         {
-            MixedVoiceItem itemToDelete = null;
-
-            if (sender is Button btn && btn.DataContext is MixedVoiceItem cardItem)
-                itemToDelete = cardItem;
-            else
-                itemToDelete = MixGrid.SelectedItem as MixedVoiceItem;
+            var btn = sender as Button;
+            MixedVoiceItem itemToDelete = btn?.DataContext as MixedVoiceItem ?? MixGrid.SelectedItem as MixedVoiceItem;
 
             if (itemToDelete != null)
             {
@@ -171,7 +158,7 @@ namespace JakeyTTS.MixVoices
 
         private void SaveInternal()
         {
-            SaveBtn?.Focus(FocusState.Programmatic);
+            if (SaveBtn != null && SaveBtn.IsEnabled) SaveBtn.Focus(FocusState.Programmatic);
             _service.Config.MixedVoices = MixList.ToList();
             _service.Config.Save();
         }
@@ -189,9 +176,11 @@ namespace JakeyTTS.MixVoices
         private void RebalanceAll(MixedVoiceItem item)
         {
             _isNormalizing = true;
-            if (item.Components.Count == 0) return;
-            float share = 1.0f / item.Components.Count;
-            foreach (var c in item.Components) c.Weight = share;
+            if (item.Components.Count > 0)
+            {
+                float share = 1.0f / item.Components.Count;
+                foreach (var c in item.Components) c.Weight = share;
+            }
             _isNormalizing = false;
         }
 
