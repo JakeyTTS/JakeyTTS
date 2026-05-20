@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -26,6 +26,9 @@ namespace JakeyTTS
         private CancellationTokenSource? _cts;
         private readonly SemaphoreSlim _ttsSemaphore = new SemaphoreSlim(1, 1);
         private AppConfig Config => TwitchService.Instance.Config;
+
+        public Dictionary<string, Action<string, Dictionary<string, object>>> CustomTags { get; } = new Dictionary<string, Action<string, Dictionary<string, object>>>();
+        public List<Func<byte[], Dictionary<string, object>, byte[]>> AudioModifiers { get; } = new List<Func<byte[], Dictionary<string, object>, byte[]>>();
 
         private TtsEngine()
         {
@@ -59,6 +62,28 @@ namespace JakeyTTS
 
         public void Stop() => _cts?.Cancel();
 
+        private string PreProcessGlobalVariables(string rawInput)
+        {
+            if (string.IsNullOrWhiteSpace(rawInput)) return rawInput;
+
+            return Regex.Replace(rawInput, @"\{(?<varName>[a-zA-Z0-9_\-]+)\}", m =>
+            {
+                string targetKey = m.Groups["varName"].Value;
+
+                if (targetKey.EndsWith("_show", StringComparison.OrdinalIgnoreCase))
+                {
+                    PluginServer.Instance.NotifyVariableRead(targetKey);
+                    return string.Empty;
+                }
+
+                if (PluginServer.Instance.GlobalVariables.TryGetValue(targetKey, out var value))
+                {
+                    return value;
+                }
+                return string.Empty;
+            });
+        }
+
         #region Device and Resolution Helpers
         public List<string> GetAudioDevices()
         {
@@ -85,11 +110,15 @@ namespace JakeyTTS
 
         private KokoroVoice? ResolveVoice(string name)
         {
+            // FIXED: Se inicializa allVoices localmente para resolver la definición del contexto de compilación
+            var allVoices = KokoroVoiceManager.Voices;
+            if (allVoices == null || !allVoices.Any()) return null;
+
             var mixCfg = Config.MixedVoices?.FirstOrDefault(m => m.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && m.IsEnabled);
             if (mixCfg != null && mixCfg.Components.Any())
             {
                 var validComps = mixCfg.Components
-                    .Select(c => (voice: KokoroVoiceManager.Voices.FirstOrDefault(v => v.Name == c.VoiceName), weight: c.Weight))
+                    .Select(c => (voice: allVoices.FirstOrDefault(v => v.Name == c.VoiceName), weight: c.Weight))
                     .Where(x => x.voice != null)
                     .ToList();
 
@@ -114,13 +143,11 @@ namespace JakeyTTS
 
                 return KokoroVoiceManager.Mix(normalizedComps.ToArray());
             }
-            return KokoroVoiceManager.Voices.FirstOrDefault(v => v.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            return allVoices.FirstOrDefault(v => v.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
         #endregion
 
-        #region Synthesis & Audio Playback Methods
-
-        // CORRECCIÓN: Movido a la sección pública principal para resolver accesibilidad global
+        #region Synthesis Methods
         public async Task PlaySoundEffect(string tagName)
         {
             var effect = Config.SoundEffects?.FirstOrDefault(e => e.TagName.Equals(tagName, StringComparison.OrdinalIgnoreCase) && e.IsEnabled);
@@ -146,11 +173,12 @@ namespace JakeyTTS
         {
             if (Synthesizer == null || string.IsNullOrWhiteSpace(text)) return null;
 
+            text = PreProcessGlobalVariables(text);
+
             var allVoices = KokoroVoiceManager.Voices;
             if (allVoices == null || !allVoices.Any()) return null;
 
             text = text.Replace("\"\"", " ").Trim();
-
             await _ttsSemaphore.WaitAsync();
 
             try
@@ -167,6 +195,7 @@ namespace JakeyTTS
                 int currentEcho = 0;
                 Melody? currentMelody = null;
 
+                var stateContext = new Dictionary<string, object>();
                 using var accumulatedStream = new MemoryStream();
                 var matches = Regex.Matches(text, @"\[(?<tag>\w+)(?:(?<sep>[:+])(?<val>[\w\.-]+))?\]|(?<text>[^\[]+)");
 
@@ -183,6 +212,10 @@ namespace JakeyTTS
                             var newVoice = ResolveVoice(m.Groups["val"].Value);
                             if (newVoice != null) currentActiveVoice = newVoice;
                         }
+                        else if (CustomTags.TryGetValue(tagName, out var pluginHandler))
+                        {
+                            pluginHandler(m.Groups["val"].Value, stateContext);
+                        }
                         else
                         {
                             HandleTag(m, ref currentActiveVoice, baseVoice, ref currentSpeed, ref currentVolume, ref currentReverse, ref currentPitch, ref currentRobot, ref currentEcho, ref currentMelody);
@@ -191,7 +224,6 @@ namespace JakeyTTS
                     else
                     {
                         string segment = m.Groups["text"].Value.Replace("\"", "").Trim();
-
                         if (string.IsNullOrWhiteSpace(segment) || segment.Length == 0) continue;
 
                         byte[] chunkData = Synthesizer.Synthesize(segment, currentActiveVoice, new KokoroTTSPipelineConfig { Speed = currentSpeed });
@@ -204,6 +236,11 @@ namespace JakeyTTS
                         if (currentRobot) rawPcmData = ApplyRobotEffect(rawPcmData);
                         if (currentEcho > 0) rawPcmData = ApplyEchoEffect(rawPcmData, currentEcho);
                         if (currentReverse) rawPcmData = ReverseAudio(rawPcmData);
+
+                        foreach (var modifier in AudioModifiers)
+                        {
+                            rawPcmData = modifier(rawPcmData, stateContext);
+                        }
 
                         if (Math.Abs(currentPitch - 1.0f) > 0.01f)
                         {
@@ -236,6 +273,8 @@ namespace JakeyTTS
         {
             if (Synthesizer == null || string.IsNullOrWhiteSpace(input)) return;
 
+            input = PreProcessGlobalVariables(input);
+
             var allVoices = KokoroVoiceManager.Voices;
             if (allVoices == null || !allVoices.Any()) return;
 
@@ -259,6 +298,7 @@ namespace JakeyTTS
                 int currentEcho = 0;
                 Melody? currentMelody = null;
 
+                var stateContext = new Dictionary<string, object>();
                 var matches = Regex.Matches(input, @"\[(?<tag>\w+)(?:(?<sep>[:+])(?<val>[\w\.-]+))?\]|(?<text>[^\[]+)");
 
                 foreach (Match m in matches)
@@ -269,13 +309,16 @@ namespace JakeyTTS
                         string tagName = m.Groups["tag"].Value.ToLower();
                         var sfx = Config.SoundEffects.FirstOrDefault(e => e.TagName.Equals(tagName, StringComparison.OrdinalIgnoreCase));
 
-                        // CORRECCIÓN: Apuntar a la llamada local expuesta abajo
                         if (sfx != null && sfx.IsEnabled) { await PlaySoundEffect(tagName); continue; }
 
                         if (tagName == "mix" || tagName == "voice")
                         {
                             var newVoice = ResolveVoice(m.Groups["val"].Value);
                             if (newVoice != null) currentActiveVoice = newVoice;
+                        }
+                        else if (CustomTags.TryGetValue(tagName, out var pluginHandler))
+                        {
+                            pluginHandler(m.Groups["val"].Value, stateContext);
                         }
                         else
                         {
@@ -296,8 +339,21 @@ namespace JakeyTTS
                         if (currentEcho > 0) wavData = ApplyEchoEffect(wavData, currentEcho);
                         if (currentReverse) wavData = ReverseAudio(wavData);
 
-                        _ = PluginServer.Instance.BroadcastEventAsync(scope, segment, wavData);
+                        if (AudioModifiers.Any())
+                        {
+                            int rawPcmLength = wavData.Length - 44;
+                            byte[] rawPcm = new byte[rawPcmLength];
+                            Buffer.BlockCopy(wavData, 44, rawPcm, 0, rawPcmLength);
 
+                            foreach (var modifier in AudioModifiers) rawPcm = modifier(rawPcm, stateContext);
+
+                            byte[] directWav = new byte[44 + rawPcm.Length];
+                            Buffer.BlockCopy(CreateWavHeader(rawPcm.Length), 0, directWav, 0, 44);
+                            Buffer.BlockCopy(rawPcm, 0, directWav, 44, rawPcm.Length);
+                            wavData = directWav;
+                        }
+
+                        _ = PluginServer.Instance.BroadcastEventAsync(scope, segment, wavData);
                         await PlayWavData(wavData, currentVolume, currentPitch, currentMelody);
                     }
                 }

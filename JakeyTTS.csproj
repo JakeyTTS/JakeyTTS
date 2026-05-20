@@ -15,11 +15,11 @@
 		<UseWinUI>true</UseWinUI>
 		<Nullable>enable</Nullable>
 
-		<Version>1.8.3</Version>
-		<AssemblyVersion>1.8.3.0</AssemblyVersion>
-		<FileVersion>1.8.3.0</FileVersion>
-		<ApplicationDisplayVersion>1.8.3</ApplicationDisplayVersion>
-		<ApplicationVersion>1.8.3.0</ApplicationVersion>
+		<Version>1.0.0</Version>
+		<AssemblyVersion>1.9.0.0</AssemblyVersion>
+		<FileVersion>1.9.0.0</FileVersion>
+		<ApplicationDisplayVersion>1.9.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1.9.0.0</ApplicationVersion>
 
 
 		<WindowsPackageType>None</WindowsPackageType>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -40,7 +40,6 @@ namespace JakeyTTS
             Config = AppConfig.Load();
             MelodyService.Instance.Initialize();
 
-            // Arrancar dependencias e infraestructuras satélites
             _ = TtsEngine.Instance;
             PluginServer.Instance.Start();
         }
@@ -57,9 +56,10 @@ namespace JakeyTTS
 
             if (action != null)
             {
-                string res = action.Response.Replace("{user}", ev.UserName, StringComparison.OrdinalIgnoreCase).Replace("{bits}", ev.Bits.ToString(), StringComparison.OrdinalIgnoreCase);
-                AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
+                string res = ProcessScript(action.Response, ev.UserName, ev.Message ?? "", "");
+                res = res.Replace("{bits}", ev.Bits.ToString(), StringComparison.OrdinalIgnoreCase);
 
+                AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
                 await TtsEngine.Instance.ProcessAndSpeak(res, "bits");
 
                 if (action.ShouldPlayUserMessage && !string.IsNullOrWhiteSpace(ev.Message))
@@ -90,9 +90,11 @@ namespace JakeyTTS
             if (streakAction != null) { response = streakAction.Response; shouldPlayText = streakAction.ShouldPlayUserMessage; }
             else if (subAction != null) { response = subAction.Response; shouldPlayText = subAction.ShouldPlayUserMessage; }
 
-            string finalMsg = response.Replace("{user}", ev.UserName, StringComparison.OrdinalIgnoreCase).Replace("{months}", cumulativeMonths.ToString(), StringComparison.OrdinalIgnoreCase).Replace("{streak}", streakMonths.ToString(), StringComparison.OrdinalIgnoreCase);
-            AddToHistory(ev.UserName, "Subscription", "Sub");
+            string finalMsg = ProcessScript(response, ev.UserName, ev.Message?.Text ?? "", "");
+            finalMsg = finalMsg.Replace("{months}", cumulativeMonths.ToString(), StringComparison.OrdinalIgnoreCase)
+                               .Replace("{streak}", streakMonths.ToString(), StringComparison.OrdinalIgnoreCase);
 
+            AddToHistory(ev.UserName, "Subscription", "Sub");
             await TtsEngine.Instance.ProcessAndSpeak(finalMsg, "subs");
 
             string userWrittenText = ev.Message?.Text;
@@ -123,6 +125,7 @@ namespace JakeyTTS
                 if (!string.IsNullOrEmpty(responseTemplate))
                 {
                     string msg = responseTemplate.Replace("{goal_title}", ev.Description, StringComparison.OrdinalIgnoreCase);
+                    msg = ProcessScript(msg, "", "", "");
                     await TtsEngine.Instance.ProcessAndSpeak(msg, "goals");
                 }
             }
@@ -178,6 +181,10 @@ namespace JakeyTTS
                 string res = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger);
                 if (cmd.ShouldReplyInChat) await SendChatReply(res, cmd.ReplyAsBot);
                 AddToHistory(ev.ChatterUserName, res, "Command");
+                if (!string.IsNullOrEmpty(cmd.TriggerPlugin) && cmd.TriggerPlugin != "None")
+                {
+                    PluginServer.Instance.NotifyTriggerEvent("command", cmd.Trigger, cmd.WebsocketParam, ev.ChatterUserName, msg, cmd.TriggerPlugin);
+                }
                 if (cmd.ShouldSpeak) await TtsEngine.Instance.ProcessAndSpeak(res, "commands");
             }
             else if (Config.ReadChatEnabled)
@@ -194,16 +201,56 @@ namespace JakeyTTS
             var redeemConfig = Config.Redeems?.FirstOrDefault(r => r.Id == ev.Reward.Id);
             if (redeemConfig != null && redeemConfig.IsEnabled)
             {
+                if (!string.IsNullOrEmpty(redeemConfig.TriggerPlugin) && redeemConfig.TriggerPlugin != "None")
+                {
+                    PluginServer.Instance.NotifyTriggerEvent("redeem", redeemConfig.Name, redeemConfig.WebsocketParam, ev.UserName, ev.UserInput ?? "", redeemConfig.TriggerPlugin);
+                }
                 string msg = ev.UserInput ?? "";
-                if (!string.IsNullOrWhiteSpace(msg)) { AddToHistory(ev.UserName, msg, "Reward"); await TtsEngine.Instance.ProcessAndSpeak(msg, "redeems"); }
+                if (!string.IsNullOrWhiteSpace(msg))
+                {
+                    msg = ProcessScript(msg, ev.UserName, msg, "");
+                    AddToHistory(ev.UserName, msg, "Reward");
+                    await TtsEngine.Instance.ProcessAndSpeak(msg, "redeems");
+                }
             }
         }
 
+        /// <summary>
+        /// FIXED: Intercepts all text templates before writing out onto chat payloads, 
+        /// recursively swapping out active plugin variables matching the {} layout configuration model rules.
+        /// </summary>
         public string ProcessScript(string script, string sender, string fullMessage, string trigger = "")
         {
             if (string.IsNullOrEmpty(script)) return fullMessage;
-            string res = script.Replace("{user}", sender, StringComparison.OrdinalIgnoreCase);
+
+            string res = script;
+            if (!string.IsNullOrEmpty(sender))
+            {
+                res = res.Replace("{user}", sender, StringComparison.OrdinalIgnoreCase);
+            }
+
             res = Regex.Replace(res, @"\{random:(\d+)-(\d+)\}", m => _rng.Next(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value) + 1).ToString());
+
+            // FIXED ATOMIC INTERCEPTOR STEP: Evaluates curly braces elements and replaces them natively via memory dictionary cache map handles
+            if (res.Contains("{"))
+            {
+                res = Regex.Replace(res, @"\{OriginalMessage\}", fullMessage, RegexOptions.IgnoreCase);
+                res = Regex.Replace(res, @"\{(?<pluginVar>[a-zA-Z0-9_\-]+)\}", m =>
+                {
+                    string key = m.Groups["pluginVar"].Value;
+                    if (key.EndsWith("_show", StringComparison.OrdinalIgnoreCase))
+                    {
+                        PluginServer.Instance.NotifyVariableRead(key);
+                        return string.Empty;
+                    }
+                    if (PluginServer.Instance.GlobalVariables.TryGetValue(key, out var dynamicOutputValue))
+                    {
+                        return dynamicOutputValue;
+                    }
+                    return m.Value; // Fallback to leave the text untouched if token doesn't match active memory entries
+                });
+            }
+
             return res;
         }
 

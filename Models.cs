@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -26,6 +26,26 @@ namespace JakeyTTS
         public bool ShouldSpeak { get; set; } = true;
         public bool ShouldReplyInChat { get; set; } = false;
         public bool ReplyAsBot { get; set; } = false;
+        public bool SendWebsocket { get; set; } = false;
+        public string WebsocketParam { get; set; } = string.Empty;
+
+        private string _triggerPlugin = "None";
+        public string TriggerPlugin
+        {
+            get
+            {
+                if (_triggerPlugin == "None" && SendWebsocket)
+                {
+                    return "All";
+                }
+                return _triggerPlugin;
+            }
+            set
+            {
+                _triggerPlugin = value;
+                SendWebsocket = (value != "None");
+            }
+        }
     }
 
 
@@ -37,6 +57,46 @@ namespace JakeyTTS
         public string FixedText { get; set; } = "{user} redeemed {target}";
         public bool ShouldReplyInChat { get; set; } = false;
         public bool ReplyAsBot { get; set; } = false;
+
+        private bool _sendWebsocket = false;
+        public bool SendWebsocket
+        {
+            get => _sendWebsocket;
+            set { if (_sendWebsocket == value) return; _sendWebsocket = value; OnPropertyChanged(); }
+        }
+
+        private string _websocketParam = string.Empty;
+        public string WebsocketParam
+        {
+            get => _websocketParam;
+            set { if (_websocketParam == value) return; _websocketParam = value; OnPropertyChanged(); }
+        }
+
+        private string _triggerPlugin = "None";
+        public string TriggerPlugin
+        {
+            get
+            {
+                if (_triggerPlugin == "None" && SendWebsocket)
+                {
+                    return "All";
+                }
+                return _triggerPlugin;
+            }
+            set
+            {
+                if (_triggerPlugin == value) return;
+                _triggerPlugin = value;
+                SendWebsocket = (value != "None");
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public class TriggerOption
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
     }
 
     public class TtsEntry

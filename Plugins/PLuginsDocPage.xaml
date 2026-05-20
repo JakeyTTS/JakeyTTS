@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="JakeyTTS.Plugins.PluginDocsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -6,274 +7,733 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Margin="40">
+    <Page.Resources>
+        <Style x:Key="TableHeaderText" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="TableCellText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="TableCodeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,30">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,20">
             <Button Click="Back_Click" Style="{StaticResource AlternateCloseButtonStyle}" Background="Transparent" BorderThickness="0" Padding="8">
                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE72B;" FontSize="16"/>
             </Button>
-            <TextBlock Text="WebSocket API Reference" Style="{StaticResource TitleTextBlockStyle}" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="JakeyTTS Extensible API Architecture" Style="{StaticResource TitleTextBlockStyle}" FontWeight="Bold" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" Padding="0,0,20,0">
-            <StackPanel Spacing="35" MaxWidth="800" HorizontalAlignment="Left">
+        <Grid Grid.Row="1" ColumnSpacing="25">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-                <TextBlock Text="The JakeyTTS WebSocket API allows third-party applications to integrate with the TTS engine. Plugins can listen to live Twitch events, request manual synthesis, or command the bot to speak through the streamer's hardware." 
-                           TextWrapping="Wrap" FontSize="15" Opacity="0.8"/>
+            <Border Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Documentation Index" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="5,5,5,15" Opacity="0.7"/>
 
-                <StackPanel Spacing="10">
-                    <TextBlock Text="1. Server Connection" FontWeight="Bold" FontSize="20"/>
-                    <TextBlock Text="The API is hosted on a local WebSocket server. Your plugin should connect as a client to the following URI:" TextWrapping="Wrap" Opacity="0.8"/>
-                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
-                        <Grid>
-                            <TextBlock x:Name="UrlText" Text="ws://localhost:8889/" FontFamily="Cascadia Code, Consolas" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                            <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="Copy_Click" Tag="UrlText" Background="Transparent" BorderThickness="0">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                            </Button>
-                        </Grid>
-                    </Border>
+                    <TreeView x:Name="DocsTree" Grid.Row="1" ItemInvoked="DocsTree_ItemInvoked" SelectionMode="Single">
+                        <TreeView.RootNodes>
+                            <TreeViewNode Content="1. Infrastructure Server" HasUnrealizedChildren="False"/>
+                            <TreeViewNode Content="2. Registration Handshake" HasUnrealizedChildren="False"/>
+                            <TreeViewNode Content="3. Core TTS Execution" HasUnrealizedChildren="False"/>
+                            <TreeViewNode Content="4. Global Variable Injection" HasUnrealizedChildren="False"/>
+                            <TreeViewNode Content="5. Capability Injections" HasUnrealizedChildren="False"/>
+                            <TreeViewNode Content="6. Remote Web UI Ingestion" HasUnrealizedChildren="False"/>
+                            <TreeViewNode Content="7. Custom Trigger Plugins" HasUnrealizedChildren="False"/>
+                        </TreeView.RootNodes>
+                    </TreeView>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Column="1" Padding="0,0,15,0" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <TextBlock Text="The updated JakeyTTS WebSocket API allows remote subsystems to inject dynamic global variable tokens, establish customized signal modulators, register slash macros, and push telemetry frames back into the central framework workspace seamlessly." 
+                               TextWrapping="Wrap" FontSize="14" Opacity="0.8" FontStyle="Italic" VerticalAlignment="Top" Margin="0,0,0,20"/>
+
+                    <StackPanel x:Name="SecServer" Spacing="12" Margin="0,50,0,0" Visibility="Visible">
+                        <TextBlock Text="1. Infrastructure Server Connection &amp; Process Routing" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="The central asynchronous core initializes an automated local loopback pipeline engine instance monitoring network connection threads on the port listed below:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="UrlText" Text="ws://localhost:8889/" FontFamily="Cascadia Code, Consolas" FontWeight="SemiBold"/>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="Copy_Click" Tag="UrlText" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Automated Execution Lifecycle Engine Specification" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <TextBlock Text="To eliminate manuals user configuration dependencies entirely, developers transmit runtime properties dynamically inside the registration handshake package. The server automatically routes process management requests based on the criteria below:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Launch State Option" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Host Action" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Orchestration Architecture Behavior Rule" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="decoupled_client" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Listen Only" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Triggered when executable parameters are omitted. The framework registers the module properties but leaves application loop lifecycles unmanaged, operating purely on network frame intercept sockets." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="managed_process" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Auto Spawn/Kill" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Triggered when path parameters are present. The framework maps file strings to local execution bins, automatically booting up modules upon approval toggle states, and systematically killing zombie binary threads on app closure loops." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="SecHandshake" Spacing="12" Margin="0,50,0,0" Visibility="Collapsed">
+                        <TextBlock Text="2. Registration Handshake Manifesto" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="Immediately following network socket connection, sub-processes must dispatch a registration payload detailing scopes, icon descriptors, binary execution paths, and metadata signatures:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="RegJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"register"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "id"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"diapstash-automation-plugin"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "name"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"DiapStash Integration Bridge"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "version"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"1.0.0"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "protocol_version"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"1.0"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "icon"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"iVBORw0KGgoAAAANSUhEUgAA..."</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "executable_path"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"C:\\Plugins\\DiapStash\\bridge.exe"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "launch_invisible"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#569CD6">true</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "subscriptions"</Run><Run Foreground="#D4D4D4">: [</Run><Run Foreground="#CE9178">"redeems"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#CE9178">"commands"</Run><Run Foreground="#D4D4D4">]</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="RegJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Upgraded Handshake Field Payload Specifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="JSON Parameter" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Data Type" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Handshake Parameter Requirement Specification" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="type" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Must equal 'register' precisely to initialize authentication validation layouts." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.id" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The absolute system unique layout string identifier for your extension (e.g., 'discord-voice-bridge')." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="3" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.icon" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string (Base64)" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Raw customized graphics asset file encoded as a continuous base64 text stream. Renders directly as the tile avatar container on the extension page workspace grid." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="4" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.executable_path" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="4" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string (Path)" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="4" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The path targeting local execution bin files. If provided, the central framework takes control of process initialization states automatically. Omit to run as decoupled clients." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="5" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.launch_invisible" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="5" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="boolean" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="5" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="When true, shifts background compilation process threads inside isolated CreateNoWindow states when launched by the user." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="6" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.subscriptions" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="6" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="array [string]" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="6" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Array string targets specifying desired hooks to intercept telemetry channels. Supported: 'chat', 'commands', 'redeems', 'bits', 'subs', 'test'." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="SecTTS" Spacing="12" Margin="0,50,0,0" Visibility="Collapsed">
+                        <TextBlock Text="3. Core TTS Loop Interactions" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="To enqueue asynchronous audio rendering assignments directly onto the server generation channels, execute a speak_request packet command:" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="SpeakJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"speak_request"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "text"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Speech pipeline automated transmission message."</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="SpeakJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Speak Parameter Specifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="JSON Key" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Type" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Specification Description" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="type" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Must be 'speak_request' or 'tts_request' interchangeably to activate text rendering pipeline workflows." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.text" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The raw message text phrase sent to process into synthesized voice data array frames." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="SecVariables" Spacing="12" Margin="0,50,0,0" Visibility="Collapsed">
+                        <TextBlock Text="4. Programmatic Global Variables System" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="External sub-processes can push native decoupled key-value tokens into the memory workspace pool. Once injected, users can embed these entities anywhere inside chat templates or custom redeems layouts using the dynamic brace syntax schema {variable_name}:" TextWrapping="Wrap" Opacity="0.8"/>
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="VarJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"set_global_variable"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "variable_name"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"diapstash_product"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "variable_value"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"SUNKISS Masterpiece (Blue)"</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="VarJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Variable Parameter Mapping Specifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="JSON Key" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Type" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Allocation Specification Definition" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="type" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Must equal 'set_global_variable' strictly to execute dictionary updates." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.variable_name" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The key identifier token string. Registered targets are cross-parsed anywhere across layout strings via bracket encapsulation." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="3" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.variable_value" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The concrete text sequence that dynamically substitutes matched database target identifiers when templates evaluate." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="SecInjections" Spacing="12" Margin="0,50,0,0" Visibility="Collapsed">
+                        <TextBlock Text="5. Capability Hook Injections &amp; DSP Modulators" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="Plugins can intercept raw voice data buffers by registering DSP tags. Once hooked, the platform routes outgoing PCM byte arrays to the socket before hardware processing:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="InjTagJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"inject_tag"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "tag_name"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"diapstash_change"</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="InjTagJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Audio Frame Input/Output Handshake Processing" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,5,0,0"/>
+                        <TextBlock Text="When the pipeline sounds processing triggers, the server dispatches a process_audio event. The plugin must immediately respond with an audio_processed envelope carrying back post-filtered base64 raw data within a 1500ms timeout threshold window limit:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="AudioProcJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"audio_processed"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "request_id"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"uuid_generated_by_server"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "pcm_base64"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"SGVsbG8gV29ybGQgTW9kdWxhdGVkIEF1ZGlvIEJ5dGVz..."</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="AudioProcJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="DSP Callback Registration Parameter Specifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="JSON Key" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Type" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Real-Time Data Handshake Rules" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="type" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Must equal 'inject_tag' to create system filters, or 'audio_processed' when returning raw buffer structures to the app server." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="request_id" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string (UUID)" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Unique tracking token generated by the server. Must be mirrored back inside your audio_processed payload response to map active streams accurately." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="3" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.pcm_base64" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string (Base64)" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Raw audio content linear PCM format data bytes, serialized as an unconstrained Base64 sequence array." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="SecUI" Spacing="12" Margin="0,50,0,0" Visibility="Collapsed">
+                        <TextBlock Text="6. Remote Web UI Ingestion" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="Embed administrative panels or dashboards natively within the central NavigationView framework window workspace:" TextWrapping="Wrap" Opacity="0.8"/>
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="InjUiJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"inject_ui_page"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "embed_url"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"https://api.diapstash.com/api/docs/"</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="InjUiJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="UI Injection Parameter Specifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="JSON Key" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Type" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Rendering Layout Requirement Rules" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="type" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Must equal 'inject_ui_page' to trigger dynamic menu tab insertions." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.embed_url" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string (URL)" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The target URL page. Pushes an adaptive container inside navigation boundaries executing integrated WebView2 web runtimes." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="SecTriggers" Spacing="12" Margin="0,50,0,0" Visibility="Collapsed">
+                        <TextBlock Text="7. Custom Trigger Plugins &amp; Event Relays" FontWeight="Bold" FontSize="20" Foreground="{ThemeResource SystemAccentColorLight2}"/>
+                        <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,8"/>
+                        <TextBlock Text="JakeyTTS allows commands and channel point redeems to trigger custom actions on specific plugins. In order for a plugin to receive these event payloads over WebSocket, it must register support during handshake subscriptions and declare its available trigger variables." TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <TextBlock Text="Step 1: Subscribing &amp; Registering Triggers" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <TextBlock Text="When your plugin performs the initial Registration Handshake, include the 'commands' and/or 'redeems' scope strings inside the 'subscriptions' array, and list the trigger variable names in the 'triggers' array:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="TriggerSubJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"register"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "id"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"diapstash-automation-plugin"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "subscriptions"</Run><Run Foreground="#D4D4D4">: [</Run><Run Foreground="#CE9178">"commands"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#CE9178">"redeems"</Run><Run Foreground="#D4D4D4">],</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "triggers"</Run><Run Foreground="#D4D4D4">: [</Run><Run Foreground="#CE9178">"diapstash_show"</Run><Run Foreground="#D4D4D4">]</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Click="Copy_Click" Tag="TriggerSubJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Step 2: Assigning the Trigger in JakeyTTS" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <TextBlock Text="Once your plugin registers, its declared triggers (e.g. 'diapstash_show') will show up in the 'Trigger Plugin' ComboBox column in the Commands or Channel Rewards tables in JakeyTTS. The user maps a command or reward directly to your trigger." TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <TextBlock Text="Step 3: Receiving the WebSocket Trigger Payload" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <TextBlock Text="When the command or reward redemption is activated, JakeyTTS dispatches a 'trigger_event' message over WebSocket. It contains the registered trigger name in the 'trigger' and 'variable' keys, allowing you to identify it independently of the user's custom command trigger name:" TextWrapping="Wrap" Opacity="0.8"/>
+
+                        <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                            <Grid>
+                                <TextBlock x:Name="TriggerEventJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
+                                    <Run Foreground="#569CD6">{</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"trigger_event"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "source"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"command"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#808080">// "command" or "redeem"</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "name"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"!showoverlay"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#808080">// user's custom trigger trigger</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "trigger"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"diapstash_show"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#808080">// your registered trigger variable</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "variable"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"diapstash_show"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "user"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"StreamerName"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
+                                    <Run Foreground="#9CDCFE">    "message"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"optional user chat message input"</Run><LineBreak/>
+                                    <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
+                                    <Run Foreground="#569CD6">}</Run>
+                                </TextBlock>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="TriggerEventJson" Background="Transparent" BorderThickness="0">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Trigger Event Payload Parameter Specifications" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,10,0,0"/>
+                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                            <Grid Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="JSON Key" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Type" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{ThemeResource LayerFillColorAltBrush}" Padding="10,8">
+                                    <TextBlock Text="Trigger Data Rules" Style="{StaticResource TableHeaderText}"/>
+                                </Border>
+
+                                <Border Grid.Row="1" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="type" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Always 'trigger_event' for WebSocket message routing." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="2" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.source" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="2" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Either 'command' or 'redeem' indicating which feature triggered the event." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="3" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.name" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="3" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The trigger name configured by the user (e.g. '!alert' or the Twitch Reward name)." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="4" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.trigger" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="4" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="4" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The specific trigger variable name (e.g. 'diapstash_show') registered by the plugin." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="5" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.variable" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="5" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="5" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Same as payload.trigger. Provided for legacy key compatibility." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="6" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.user" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="6" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="6" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="Username of the user who executed the command or redeemed the reward." Style="{StaticResource TableCellText}"/>
+                                </Border>
+
+                                <Border Grid.Row="7" Grid.Column="0" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="payload.message" Style="{StaticResource TableCodeText}"/>
+                                </Border>
+                                <Border Grid.Row="7" Grid.Column="1" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="string" Style="{StaticResource TableCellText}" Opacity="0.7"/>
+                                </Border>
+                                <Border Grid.Row="7" Grid.Column="2" Padding="10" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <TextBlock Text="The extra text arguments or user input message associated with the trigger." Style="{StaticResource TableCellText}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15" Margin="0,20,0,0">
+            <Button x:Name="PrevBtn" Click="Prev_Click" IsEnabled="False" Width="120">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE76B;" FontSize="12"/>
+                    <TextBlock Text="Previous"/>
                 </StackPanel>
-
-                <StackPanel Spacing="10">
-                    <TextBlock Text="2. Registration Handshake" FontWeight="Bold" FontSize="20"/>
-                    <TextBlock Text="Upon connection, the server expects a 'register' packet. This identifies your plugin and determines which audio streams the server will push to you." TextWrapping="Wrap" Opacity="0.8"/>
-
-                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
-                        <Grid>
-                            <TextBlock x:Name="RegJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
-                                <Run Foreground="#569CD6">{</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"register"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "id"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"my-plugin-id"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "name"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Plugin Name"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "icon_base64"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"..."</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "subscriptions"</Run><Run Foreground="#D4D4D4">: [</Run><Run Foreground="#CE9178">"chat"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#CE9178">"commands"</Run><Run Foreground="#D4D4D4">, </Run><Run Foreground="#CE9178">"test"</Run><Run Foreground="#D4D4D4">]</Run><LineBreak/>
-                                <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
-                                <Run Foreground="#569CD6">}</Run>
-                            </TextBlock>
-                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="RegJson" Background="Transparent" BorderThickness="0">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                            </Button>
-                        </Grid>
-                    </Border>
-
-                    <TextBlock Text="Registration Payload Parameters:" FontWeight="SemiBold" Margin="0,10,0,5"/>
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-                        <StackPanel>
-                            <Grid Padding="15,10" Background="{ThemeResource LayerFillColorAltBrush}" CornerRadius="8,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Field" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                                <TextBlock Grid.Column="1" Text="Type" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                                <TextBlock Grid.Column="2" Text="Description" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="id" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="string" Opacity="0.6" FontSize="12"/>
-                                <TextBlock Grid.Column="2" Text="Unique ID used to persist approval status in JakeyTTS settings." FontSize="13" TextWrapping="Wrap"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="subscriptions" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="array" Opacity="0.6" FontSize="12"/>
-                                <TextBlock Grid.Column="2" Text="List of events the plugin wants to receive audio for." FontSize="13" TextWrapping="Wrap"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Available Subscription Scopes:" FontWeight="SemiBold" Margin="0,15,0,5"/>
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-                        <StackPanel>
-                            <Grid Padding="15,10" Background="{ThemeResource LayerFillColorAltBrush}" CornerRadius="8,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Scope Name" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                                <TextBlock Grid.Column="1" Text="Event Trigger Description" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&quot;chat&quot;" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="Fires for standard Twitch chat messages when 'Read Chat' is enabled." FontSize="13"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&quot;commands&quot;" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="Fires for custom Twitch chat commands (e.g., !tts message)." FontSize="13"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&quot;redeems&quot;" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="Fires when a Twitch Channel Point reward with TTS text is redeemed." FontSize="13"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&quot;bits&quot;" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="Fires for Cheer/Bits events that include a message." FontSize="13"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&quot;subs&quot;" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="Fires for Subscriptions, Gift Subs, and Re-subscription messages." FontSize="13"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="&quot;test&quot;" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="Fires for manual audio tests triggered via the JakeyTTS UI." FontSize="13"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
+            </Button>
+            <Button x:Name="NextBtn" Click="Next_Click" Style="{StaticResource AccentButtonStyle}" Width="120">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Next Page"/>
+                    <FontIcon Glyph="&#xE76A;" FontSize="12"/>
                 </StackPanel>
-
-                <StackPanel Spacing="10">
-                    <TextBlock Text="3. Receiving Audio Broadcasts" FontWeight="Bold" FontSize="20"/>
-                    <TextBlock Text="When an event occurs in a subscribed scope, the server pushes an 'event_broadcast' packet. This contains the synthesized text and the raw audio data." TextWrapping="Wrap" Opacity="0.8"/>
-
-                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
-                        <Grid>
-                            <TextBlock x:Name="EventJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
-                                <Run Foreground="#569CD6">{</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"event_broadcast"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "scope"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"chat"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "text"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Hello stream!"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "audio_base64"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"UklGRiQAA..."</Run><LineBreak/>
-                                <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
-                                <Run Foreground="#569CD6">}</Run>
-                            </TextBlock>
-                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="EventJson" Background="Transparent" BorderThickness="0">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                            </Button>
-                        </Grid>
-                    </Border>
-                    <TextBlock Text="The audio is provided as a standard 24kHz, 16-bit, Mono PCM WAV file encoded in Base64." FontSize="12" Opacity="0.6" FontStyle="Italic"/>
-                </StackPanel>
-
-                <StackPanel Spacing="10">
-                    <TextBlock Text="4. Local Speech Command (Hardware Output)" FontWeight="Bold" FontSize="20"/>
-                    <TextBlock Text="To play text through the streamer's physical speakers, send a 'speak_request'. This message is added to the JakeyTTS playback queue." TextWrapping="Wrap" Opacity="0.8"/>
-
-                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
-                        <Grid>
-                            <TextBlock x:Name="SpeakJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
-                                <Run Foreground="#569CD6">{</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"speak_request"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "text"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Speech through hardware"</Run><LineBreak/>
-                                <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
-                                <Run Foreground="#569CD6">}</Run>
-                            </TextBlock>
-                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="SpeakJson" Background="Transparent" BorderThickness="0">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                            </Button>
-                        </Grid>
-                    </Border>
-                </StackPanel>
-
-                <StackPanel Spacing="10" Margin="0,0,0,40">
-                    <TextBlock Text="5. Direct TTS Request (Silent Synthesis)" FontWeight="Bold" FontSize="20"/>
-                    <TextBlock Text="Use 'tts_request' to obtain audio bytes without playing them on the streamer's PC. This is used for creating audio files to share back into Discord or other chats." TextWrapping="Wrap" Opacity="0.8"/>
-
-                    <Border Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
-                        <Grid>
-                            <TextBlock x:Name="TtsReqJson" FontFamily="Cascadia Code, Consolas" TextWrapping="Wrap">
-                                <Run Foreground="#569CD6">{</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "type"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"tts_request"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "request_id"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"unique-guid-123"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">  "payload"</Run><Run Foreground="#D4D4D4">: {</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "text"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"Text for silent synthesis"</Run><Run Foreground="#D4D4D4">,</Run><LineBreak/>
-                                <Run Foreground="#9CDCFE">    "voice"</Run><Run Foreground="#D4D4D4">: </Run><Run Foreground="#CE9178">"default"</Run><LineBreak/>
-                                <Run Foreground="#D4D4D4">  }</Run><LineBreak/>
-                                <Run Foreground="#569CD6">}</Run>
-                            </TextBlock>
-                            <Button HorizontalAlignment="Right" VerticalAlignment="Top" Click="Copy_Click" Tag="TtsReqJson" Background="Transparent" BorderThickness="0">
-                                <FontIcon Glyph="&#xE8C8;" FontSize="14"/>
-                            </Button>
-                        </Grid>
-                    </Border>
-
-                    <TextBlock Text="Silent Synthesis Response Parameters:" FontWeight="SemiBold" Margin="0,10,0,5"/>
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-                        <StackPanel>
-                            <Grid Padding="15,10" Background="{ThemeResource LayerFillColorAltBrush}" CornerRadius="8,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Field" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                                <TextBlock Grid.Column="1" Text="Type" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                                <TextBlock Grid.Column="2" Text="Description" FontWeight="Bold" FontSize="13" Opacity="0.8"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="request_id" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="string" Opacity="0.6" FontSize="12"/>
-                                <TextBlock Grid.Column="2" Text="The original GUID sent in your request to track the response." FontSize="13" TextWrapping="Wrap"/>
-                            </Grid>
-                            <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.5"/>
-                            <Grid Padding="15,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="audio_base64" FontFamily="Cascadia Code" Foreground="{ThemeResource SystemAccentColorLight2}"/>
-                                <TextBlock Grid.Column="1" Text="string" Opacity="0.6" FontSize="12"/>
-                                <TextBlock Grid.Column="2" Text="The generated WAV data. This response skips the hardware playback." FontSize="13" TextWrapping="Wrap"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
+            </Button>
+        </StackPanel>
     </Grid>
 </Page>

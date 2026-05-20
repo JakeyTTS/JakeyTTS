@@ -1,15 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using JakeyTTS.Plugins;
+using JakeyTTS.UserActions;
+using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Navigation;
 using WinRT.Interop;
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
-using System.Runtime.InteropServices;
-using JakeyTTS.UserActions;
-using JakeyTTS.Plugins;
 
 namespace JakeyTTS
 {
@@ -28,11 +31,13 @@ namespace JakeyTTS
 
         private SubclassProc _subclassProcDelegate;
 
+        // Memory cache directory to match injected plugin identifiers to their web interface target URLs
+        private readonly Dictionary<string, string> _dynamicPluginUrls = new Dictionary<string, string>();
+
         public MainWindow()
         {
             Instance = this;
             this.InitializeComponent();
-            
 
             this.Title = "JakeyTTS";
             SystemBackdrop = new MicaBackdrop();
@@ -49,6 +54,9 @@ namespace JakeyTTS
             SetWindowSubclass(hWnd, _subclassProcDelegate, 0, IntPtr.Zero);
 
             HotkeyService.Instance.Setup(hWnd);
+
+            // Trigger safe environment teardown routines on application lifecycle closure
+            this.Closed += MainWindow_Closed;
 
             NavView.Header = null;
             ContentFrame.Navigate(typeof(HomePage));
@@ -97,6 +105,20 @@ namespace JakeyTTS
             catch { }
         }
 
+        // Clean teardown routine to prevent zombie background processes from consuming host resources
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            try
+            {
+                // Terminate the network pipeline listener and forcefully kill all child background execution bin threads
+                PluginServer.Instance.Stop();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error during plugin server shutdown: {ex.Message}");
+            }
+        }
+
         #region Navigation Logic
 
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
@@ -112,7 +134,7 @@ namespace JakeyTTS
             if (item?.Tag == null) return;
 
             string tag = item.Tag.ToString();
-            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag== "UserActions" || tag == "Plugins" || tag == "Keybinds") ? null : item.Content;
+            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag == "UserActions" || tag == "Plugins" || tag == "Keybinds") ? null : item.Content;
 
             switch (tag)
             {
@@ -149,6 +171,36 @@ namespace JakeyTTS
                 case "Plugins":
                     ContentFrame.Navigate(typeof(PluginsPage));
                     break;
+                default:
+                    // Dynamic navigation fallthrough handler designed for customized views registered by external plugins
+                    if (_dynamicPluginUrls.TryGetValue(tag, out string embedUrl))
+                    {
+                        ContentFrame.Navigate(typeof(PluginWebPage), embedUrl);
+                    }
+                    break;
+            }
+        }
+
+        public void NotifyDynamicUiRegistered(string pluginId, string pluginName, string embedUrl)
+        {
+            // Verify structural overlap constraints to eliminate layout duplication anomalies within menu options
+            var existingItem = NavView.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => i.Tag?.ToString() == pluginId);
+
+            if (existingItem == null)
+            {
+                // Map the targeted connection string location coordinates to the key context profile properties
+                _dynamicPluginUrls[pluginId] = embedUrl;
+
+                // Instantiate a new navigation option item block container directly inside the system dashboard viewport frame
+                var newItem = new NavigationViewItem
+                {
+                    Content = pluginName,
+                    Tag = pluginId,
+                    Icon = new SymbolIcon(Symbol.Globe)
+                };
+
+                NavView.MenuItems.Add(newItem);
+                Log($"🌐 Dynamic UI Page registered for plugin: {pluginName}");
             }
         }
 
@@ -185,7 +237,7 @@ namespace JakeyTTS
 
                 FontIcon showIcon = new FontIcon();
                 showIcon.FontFamily = new FontFamily("Segoe Fluent Icons");
-                showIcon.Glyph = "\uEBE8"; // List icon
+                showIcon.Glyph = "\uEBE8";
                 LogToggleBtn.Icon = showIcon;
             }
             else
@@ -199,4 +251,38 @@ namespace JakeyTTS
         }
         #endregion
     }
+
+    #region Helper Dynamic Page Class
+    /// <summary>
+    /// Isolated page controller that builds out an adaptive WebView2 container framework 
+    /// mapped inside standard WinUI 3 workspace constraints.
+    /// </summary>
+    public class PluginWebPage : Page
+    {
+        private readonly WebView2 _webView;
+
+        public PluginWebPage()
+        {
+            _webView = new WebView2();
+            this.Content = _webView;
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            if (e.Parameter is string url && !string.IsNullOrWhiteSpace(url))
+            {
+                try
+                {
+                    _webView.Source = new Uri(url);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to load plugin URL: {ex.Message}");
+                }
+            }
+        }
+    }
+    #endregion
 }

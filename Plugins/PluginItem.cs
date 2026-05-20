@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace JakeyTTS
@@ -25,5 +25,14 @@ namespace JakeyTTS
 
         private bool _isEnabled = false;
         public bool IsEnabled { get => _isEnabled; set { _isEnabled = value; OnPropertyChanged(); } }
+
+        private string _executablePath = "";
+        public string ExecutablePath { get => _executablePath; set { _executablePath = value; OnPropertyChanged(); } }
+
+        private bool _launchInvisible = true;
+        public bool LaunchInvisible { get => _launchInvisible; set { _launchInvisible = value; OnPropertyChanged(); } }
+
+        private List<string> _triggers = new();
+        public List<string> Triggers { get => _triggers; set { _triggers = value; OnPropertyChanged(); } }
     }
 }
