@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using System;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
@@ -5,7 +8,7 @@ using Microsoft.UI.Xaml.Controls;
 using Windows.System;
 using Windows.UI.Core;
 
-namespace JakeyTTS
+namespace JakeyTTS.Views
 {
     public sealed partial class KeybindsPage : Page
     {
@@ -86,3 +89,4 @@ namespace JakeyTTS
         }
     }
 }
+

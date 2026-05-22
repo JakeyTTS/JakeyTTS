@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
@@ -6,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace JakeyTTS
+namespace JakeyTTS.Views
 {
     public sealed partial class SoundEffectsPage : Page
     {
@@ -75,3 +78,4 @@ namespace JakeyTTS
         }
     }
 }
+

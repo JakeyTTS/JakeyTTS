@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
@@ -11,7 +14,7 @@ using Windows.Storage.Pickers;
 using WinRT.Interop;
 using JakeyTTS.Melodies;
 
-namespace JakeyTTS
+namespace JakeyTTS.Views
 {
     public sealed partial class SettingsPage : Page
     {
@@ -230,3 +233,4 @@ namespace JakeyTTS
         #endregion
     }
 }
+

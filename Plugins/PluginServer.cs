@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

@@ -1,15 +1,18 @@
-ï»¿using System;
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using JakeyTTS.Melodies; // AsegÃºrate de que esto apunte a donde estÃ¡ MelodyPoint
+using JakeyTTS.Melodies; // Asegúrate de que esto apunte a donde está MelodyPoint
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Foundation;
 
-namespace JakeyTTS.Converters
+namespace JakeyTTS.Core.Converters
 {
     // Para las Tarjetas de Voces Mezcladas
     public class PointCountConverterVoice : IValueConverter
@@ -144,3 +147,4 @@ namespace JakeyTTS.Converters
 
 
 }
+

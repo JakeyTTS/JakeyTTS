@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -47,7 +50,7 @@ namespace JakeyTTS.MixVoices
                 else
                     ComponentsList.ItemsSource = null;
 
-                try { this.Bindings?.Update(); } catch { }
+
             };
         }
 

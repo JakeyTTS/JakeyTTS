@@ -1,8 +1,11 @@
-﻿using System;
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
+using System;
 using System.Runtime.InteropServices;
 using System.Linq;
 
-namespace JakeyTTS
+namespace JakeyTTS.Services
 {
     public class HotkeyService
     {
@@ -54,3 +57,4 @@ namespace JakeyTTS
         }
     }
 }
+

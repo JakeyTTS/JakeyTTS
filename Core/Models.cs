@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,7 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using JakeyTTS.Melodies;
 
-namespace JakeyTTS
+namespace JakeyTTS.Core
 {
     public class BaseNotify : INotifyPropertyChanged
     {
@@ -28,6 +31,7 @@ namespace JakeyTTS
         public bool ReplyAsBot { get; set; } = false;
         public bool SendWebsocket { get; set; } = false;
         public string WebsocketParam { get; set; } = string.Empty;
+        public bool ShowOnOverlay { get; set; } = true;
 
         private string _triggerPlugin = "None";
         public string TriggerPlugin
@@ -57,6 +61,13 @@ namespace JakeyTTS
         public string FixedText { get; set; } = "{user} redeemed {target}";
         public bool ShouldReplyInChat { get; set; } = false;
         public bool ReplyAsBot { get; set; } = false;
+
+        private bool _showOnOverlay = true;
+        public bool ShowOnOverlay
+        {
+            get => _showOnOverlay;
+            set { if (_showOnOverlay == value) return; _showOnOverlay = value; OnPropertyChanged(); }
+        }
 
         private bool _sendWebsocket = false;
         public bool SendWebsocket

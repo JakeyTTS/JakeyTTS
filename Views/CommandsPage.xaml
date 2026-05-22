@@ -1,5 +1,5 @@
 <Page
-    x:Class="JakeyTTS.CommandsPage"
+    x:Class="JakeyTTS.Views.CommandsPage"
     x:Name="PageRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -46,6 +46,9 @@
 
                         <controls:TableViewCheckBoxColumn Header="Bot" 
         Binding="{Binding ReplyAsBot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+
+                        <controls:TableViewCheckBoxColumn Header="Overlay" 
+        Binding="{Binding ShowOnOverlay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
 
                         <controls:TableViewTemplateColumn Header="Trigger Plugin" Width="160">
                             <controls:TableViewTemplateColumn.CellTemplate>

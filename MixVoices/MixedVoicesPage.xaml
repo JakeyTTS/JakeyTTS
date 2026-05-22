@@ -4,8 +4,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:models="using:JakeyTTS" 
-    xmlns:conv="using:JakeyTTS.Converters" 
+    xmlns:models="using:JakeyTTS.Core" 
+    xmlns:conv="using:JakeyTTS.Core.Converters" 
     mc:Ignorable="d" x:Name="RootPage">
 
     <Page.Resources>
@@ -53,11 +53,11 @@
                                 </Grid.RowDefinitions>
 
                                 <FontIcon Glyph="&#xE77B;" Foreground="MediumOrchid" FontSize="28" Margin="0,0,0,10" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Row="1" Text="{x:Bind Name, Mode=OneWay}" FontWeight="Bold" 
+                                <TextBlock Grid.Row="1" Text="{Binding Name, Mode=OneWay}" FontWeight="Bold" 
                                            HorizontalAlignment="Center" TextAlignment="Center" MaxLines="1" TextWrapping="NoWrap"/>
-                                <TextBlock Grid.Row="2" Text="{x:Bind Name, Mode=OneWay, Converter={StaticResource TagPreviewConverter}}" 
+                                <TextBlock Grid.Row="2" Text="{Binding Name, Mode=OneWay, Converter={StaticResource TagPreviewConverter}}" 
                                            Foreground="MediumOrchid" HorizontalAlignment="Center" FontSize="11" FontWeight="SemiBold" Opacity="0.8"/>
-                                <ToggleSwitch Grid.Row="3" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" 
+                                <ToggleSwitch Grid.Row="3" IsOn="{Binding IsEnabled, Mode=TwoWay}" 
                                               OnContent="Active" OffContent="Disabled" 
                                               FontSize="11" MinWidth="0" HorizontalAlignment="Center" Margin="0,8,0,0"/>
                                 <Button Grid.Row="5" Click="DeleteMix_Click" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Padding="8,4">
@@ -120,7 +120,7 @@
                                                               SelectionChanged="ComponentLanguage_Changed"/>
 
                                                     <ComboBox Grid.Column="1" Header="Voice" HorizontalAlignment="Stretch"
-                                                              SelectedItem="{x:Bind VoiceName, Mode=TwoWay}"/>
+                                                              SelectedItem="{Binding VoiceName, Mode=TwoWay}"/>
 
                                                     <Button Grid.Column="2" VerticalAlignment="Bottom" Click="RemoveComponent_Click" Background="Transparent" BorderThickness="0">
                                                         <FontIcon Glyph="&#xE711;" Foreground="Red" FontSize="14"/>
@@ -130,9 +130,9 @@
                                                 <StackPanel>
                                                     <Grid>
                                                         <TextBlock Text="Influence" FontSize="12" Opacity="0.8"/>
-                                                        <TextBlock Text="{x:Bind Weight, Mode=OneWay, Converter={StaticResource PercentConverter}}" HorizontalAlignment="Right" FontSize="12" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding Weight, Mode=OneWay, Converter={StaticResource PercentConverter}}" HorizontalAlignment="Right" FontSize="12" FontWeight="Bold"/>
                                                     </Grid>
-                                                    <Slider Value="{x:Bind Weight, Mode=TwoWay}" Minimum="0" Maximum="1" StepFrequency="0.01" SmallChange="0.01" 
+                                                    <Slider Value="{Binding Weight, Mode=TwoWay}" Minimum="0" Maximum="1" StepFrequency="0.01" SmallChange="0.01" 
                                                             ValueChanged="WeightSlider_ValueChanged"/>
                                                 </StackPanel>
                                             </StackPanel>
@@ -160,3 +160,4 @@
         </Border>
     </Grid>
 </Page>
+

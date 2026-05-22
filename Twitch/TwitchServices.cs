@@ -1,3 +1,6 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -185,7 +188,7 @@ namespace JakeyTTS
                 {
                     PluginServer.Instance.NotifyTriggerEvent("command", cmd.Trigger, cmd.WebsocketParam, ev.ChatterUserName, msg, cmd.TriggerPlugin);
                 }
-                if (cmd.ShouldSpeak) await TtsEngine.Instance.ProcessAndSpeak(res, "commands");
+                if (cmd.ShouldSpeak) await TtsEngine.Instance.ProcessAndSpeak(res, cmd.ShowOnOverlay ? "commands" : "hidden");
             }
             else if (Config.ReadChatEnabled)
             {
@@ -210,7 +213,7 @@ namespace JakeyTTS
                 {
                     msg = ProcessScript(msg, ev.UserName, msg, "");
                     AddToHistory(ev.UserName, msg, "Reward");
-                    await TtsEngine.Instance.ProcessAndSpeak(msg, "redeems");
+                    await TtsEngine.Instance.ProcessAndSpeak(msg, redeemConfig.ShowOnOverlay ? "redeems" : "hidden");
                 }
             }
         }

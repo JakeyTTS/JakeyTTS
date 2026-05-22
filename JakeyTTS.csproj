@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
@@ -64,13 +64,13 @@
 		<None Remove="MixVoices\MixedVoicesPage.xaml" />
 		<None Remove="Plugins\PLuginsDocPage.xaml" />
 		<None Remove="Plugins\PluginsPage.xaml" />
-		<None Remove="SoundEffectsPage.xaml" />
+		<None Remove="Views\SoundEffectsPage.xaml" />
 		<None Remove="UserActions\UserActionsPage.xaml" />
-		<Content Include="assets\kokoro-v1.0.onnx" Link="kokoro-v1.0.onnx" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="assets\kokoro-v1.0.onnx" Condition="Exists('assets\kokoro-v1.0.onnx')" Link="kokoro-v1.0.onnx" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Page Update="SoundEffectsPage.xaml">
+	  <Page Update="Views\SoundEffectsPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </Page>
 	</ItemGroup>

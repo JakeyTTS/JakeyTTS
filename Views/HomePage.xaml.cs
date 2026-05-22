@@ -1,9 +1,12 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 
-namespace JakeyTTS
+namespace JakeyTTS.Views
 {
     public sealed partial class HomePage : Page
     {
@@ -47,3 +50,4 @@ namespace JakeyTTS
         private void ConfigureBtn_Click(object sender, RoutedEventArgs e) => this.Frame.Navigate(typeof(TTSConfigPage));
     }
 }
+

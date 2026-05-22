@@ -1,9 +1,12 @@
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace JakeyTTS
+namespace JakeyTTS.Views
 {
     public sealed partial class CommandsPage : Page
     {
@@ -67,3 +70,4 @@ namespace JakeyTTS
         }
     }
 }
+

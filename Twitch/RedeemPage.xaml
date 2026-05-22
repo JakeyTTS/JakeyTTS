@@ -33,6 +33,7 @@
                         <controls:TableViewTextColumn Header="TTS Response" Binding="{Binding FixedText}" Width="Auto" MinWidth="350"/>
                         <controls:TableViewCheckBoxColumn Header="Chat" Binding="{Binding ShouldReplyInChat}" Width="80"/>
                         <controls:TableViewCheckBoxColumn Header="Bot" Binding="{Binding ReplyAsBot}" Width="80"/>
+                        <controls:TableViewCheckBoxColumn Header="Overlay" Binding="{Binding ShowOnOverlay}" Width="80"/>
                         <controls:TableViewTemplateColumn Header="Trigger Plugin" Width="160">
                             <controls:TableViewTemplateColumn.CellTemplate>
                                 <DataTemplate>

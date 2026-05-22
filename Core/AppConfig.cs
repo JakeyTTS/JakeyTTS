@@ -1,11 +1,14 @@
-﻿using System;
+using JakeyTTS.Core;
+using JakeyTTS.Views;
+using JakeyTTS.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using Windows.System;
 
-namespace JakeyTTS
+namespace JakeyTTS.Core
 {
     public class AppConfig
     {
@@ -77,7 +80,7 @@ namespace JakeyTTS
             {
                 new CommandItem {
                     Trigger = "!tts",
-                    Response = "🎙 JakeyTTS: \"[speed+0.8]\" Slower \"[normal]\"\" [speed+1.5]\" Faster! Use\" [pause+1]\" for 1s pause or \"[normal]\" to reset speed.",
+                    Response = "?? JakeyTTS: \"[speed+0.8]\" Slower \"[normal]\"\" [speed+1.5]\" Faster! Use\" [pause+1]\" for 1s pause or \"[normal]\" to reset speed.",
                     IsEnabled = true, ShouldSpeak = false, ShouldReplyInChat = true
                 },
                 new CommandItem {
@@ -121,3 +124,4 @@ namespace JakeyTTS
         }
     }
 }
+
