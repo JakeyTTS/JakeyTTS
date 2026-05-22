@@ -360,4 +360,4 @@ MigrationBackup/
 .ionide/
 
 # Fody - auto-generated XML schema
-FodyWeavers.xsd
+FodyWeavers.xsdAssets/kokoro-v1.0.onnx
