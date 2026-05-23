@@ -178,17 +178,55 @@ namespace JakeyTTS
         {
             var ev = e.Payload.Event;
             string msg = ev.Message.Text.Trim();
-            var cmd = Config.Commands?.FirstOrDefault(c => msg.StartsWith(c.Trigger, StringComparison.OrdinalIgnoreCase));
+            
+            string[] parts = msg.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return;
+            string firstWord = parts[0];
+
+            var cmd = Config.Commands?.FirstOrDefault(c => firstWord.Equals(c.Trigger, StringComparison.OrdinalIgnoreCase));
             if (cmd != null && cmd.IsEnabled)
             {
-                string res = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger);
-                if (cmd.ShouldReplyInChat) await SendChatReply(res, cmd.ReplyAsBot);
-                AddToHistory(ev.ChatterUserName, res, "Command");
-                if (!string.IsNullOrEmpty(cmd.TriggerPlugin) && cmd.TriggerPlugin != "None")
+                // PERMISSIONS CHECK
+                bool hasPerm = false;
+                if (cmd.AllowEveryone) hasPerm = true;
+                else if (ev.Badges != null)
                 {
-                    PluginServer.Instance.NotifyTriggerEvent("command", cmd.Trigger, cmd.WebsocketParam, ev.ChatterUserName, msg, cmd.TriggerPlugin);
+                    if (cmd.AllowBroadcaster && ev.Badges.Any(b => b.SetId == "broadcaster")) hasPerm = true;
+                    if (cmd.AllowModerator && ev.Badges.Any(b => b.SetId == "moderator")) hasPerm = true;
+                    if (cmd.AllowVIP && ev.Badges.Any(b => b.SetId == "vip" || b.SetId == "founder")) hasPerm = true;
                 }
-                if (cmd.ShouldSpeak) await TtsEngine.Instance.ProcessAndSpeak(res, cmd.ShowOnOverlay ? "commands" : "hidden");
+                
+                if (!hasPerm) return;
+
+                if (cmd.GenerateRandomVariable)
+                {
+                    double roll;
+                    if (cmd.RandomIsFloat)
+                    {
+                        roll = (cmd.RandomMax - cmd.RandomMin) * _rng.NextDouble() + cmd.RandomMin;
+                    }
+                    else
+                    {
+                        roll = _rng.Next((int)Math.Round(cmd.RandomMin), (int)Math.Round(cmd.RandomMax) + 1);
+                    }
+                    UpdateVariable(cmd.RandomTargetScope, cmd.RandomTargetVariable, "Set", roll.ToString(System.Globalization.CultureInfo.InvariantCulture), cmd, isNumber: true);
+                }
+
+                if (cmd.UseActionBlocks)
+                {
+                    await ExecuteActionBlocks(cmd, cmd.Trigger, ev.ChatterUserName, msg);
+                }
+                else
+                {
+                    string res = ProcessScript(cmd.Response, ev.ChatterUserName, msg, cmd.Trigger, cmd);
+                    if (cmd.ShouldReplyInChat) await SendChatReply(res, cmd.ReplyAsBot);
+                    AddToHistory(ev.ChatterUserName, res, "Command");
+                    if (!string.IsNullOrEmpty(cmd.TriggerPlugin) && cmd.TriggerPlugin != "None")
+                    {
+                        PluginServer.Instance.NotifyTriggerEvent("command", cmd.Trigger, cmd.WebsocketParam, ev.ChatterUserName, msg, cmd.TriggerPlugin);
+                    }
+                    if (cmd.ShouldSpeak) await TtsEngine.Instance.ProcessAndSpeak(res, "commands");
+                }
             }
             else if (Config.ReadChatEnabled)
             {
@@ -198,22 +236,192 @@ namespace JakeyTTS
             }
         }
 
+        private async Task ExecuteActionBlocks(IActionableItem cmd, string trigger, string sender, string fullMessage)
+        {
+            foreach (var action in cmd.Actions)
+            {
+                // CHECK CONDITION
+                bool conditionMet = true;
+                string cleanMsg = fullMessage;
+                if (!string.IsNullOrEmpty(trigger) && fullMessage.StartsWith(trigger, StringComparison.OrdinalIgnoreCase))
+                    cleanMsg = fullMessage.Substring(trigger.Length).Trim();
+                
+                bool hasMsg = !string.IsNullOrWhiteSpace(cleanMsg);
+
+                if (action.Condition == CommandCondition.IfUserProvidedMessage && !hasMsg) conditionMet = false;
+                else if (action.Condition == CommandCondition.IfNoMessageProvided && hasMsg) conditionMet = false;
+                else if (action.Condition == CommandCondition.IfVariableMatch)
+                {
+                    string varValue = GetVariableValue(action.ConditionScope, action.ConditionVariable, cmd);
+                    string compareValue = ProcessScript(action.ConditionValue, sender, fullMessage, trigger, cmd);
+                    
+                    if (action.ConditionOperator == "==") conditionMet = (varValue == compareValue);
+                    else if (action.ConditionOperator == "!=") conditionMet = (varValue != compareValue);
+                    else if (action.ConditionOperator == "Contains") conditionMet = varValue.Contains(compareValue, StringComparison.OrdinalIgnoreCase);
+                    else if (action.ConditionOperator == ">") { if (double.TryParse(varValue, out double v1) && double.TryParse(compareValue, out double v2)) conditionMet = v1 > v2; else conditionMet = false; }
+                    else if (action.ConditionOperator == "<") { if (double.TryParse(varValue, out double v1) && double.TryParse(compareValue, out double v2)) conditionMet = v1 < v2; else conditionMet = false; }
+                }
+                else if (action.Condition == CommandCondition.IfVariableListIsEmpty)
+                {
+                    VariableStore store = (action.ConditionScope == "Local" && cmd != null) ? cmd.LocalVariables : Config.GlobalVariables;
+                    var lst = store.Lists.FirstOrDefault(l => l.Key.Equals(action.ConditionVariable, StringComparison.OrdinalIgnoreCase));
+                    conditionMet = (lst == null || lst.Values.Count == 0);
+                }
+                else if (action.Condition == CommandCondition.IfRandomChance)
+                {
+                    if (double.TryParse(action.ConditionValue, out double chance))
+                    {
+                        double roll = _rng.NextDouble() * 100.0;
+                        conditionMet = roll <= chance;
+                    }
+                    else
+                    {
+                        conditionMet = false;
+                    }
+                }
+
+                if (!conditionMet) continue;
+
+                // EXECUTE ACTIONS FOR THIS BLOCK
+                if (action.UpdateVariable && action.UpdateVariableFirst && !string.IsNullOrWhiteSpace(action.TargetVariable))
+                {
+                    UpdateVariable(action.VariableScope, action.TargetVariable, action.VariableOperator, ProcessScript(action.VariableValue, sender, fullMessage, trigger, cmd), cmd);
+                }
+
+                string processedResponse = ProcessScript(action.Response, sender, fullMessage, trigger, cmd);
+                
+                if (action.ShouldReplyInChat && !string.IsNullOrWhiteSpace(processedResponse))
+                {
+                    await SendChatReply(processedResponse, action.ReplyAsBot);
+                }
+                
+                if (action.ShouldSpeak && !string.IsNullOrWhiteSpace(processedResponse))
+                {
+                    AddToHistory(sender, processedResponse, "Command Block");
+                    await TtsEngine.Instance.ProcessAndSpeak(processedResponse, "commands");
+                }
+                
+                if (action.TriggerPlugin != "None")
+                {
+                    PluginServer.Instance.NotifyTriggerEvent("command", trigger, action.WebsocketParam, sender, fullMessage, action.TriggerPlugin);
+                }
+
+                if (action.UpdateVariable && !action.UpdateVariableFirst && !string.IsNullOrWhiteSpace(action.TargetVariable))
+                {
+                    UpdateVariable(action.VariableScope, action.TargetVariable, action.VariableOperator, ProcessScript(action.VariableValue, sender, fullMessage, trigger, cmd), cmd);
+                }
+
+                if (action.WaitMs > 0)
+                {
+                    await Task.Delay(action.WaitMs);
+                }
+            }
+        }
+
+        private string GetVariableValue(string scope, string key, IActionableItem? cmd)
+        {
+            VariableStore store = (scope == "Local" && cmd != null) ? cmd.LocalVariables : Config.GlobalVariables;
+            var scalar = store.Scalars.FirstOrDefault(s => s.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            if (scalar != null) return scalar.Value;
+            var lst = store.Lists.FirstOrDefault(l => l.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            if (lst != null && lst.Values.Count > 0) return lst.Values.Count.ToString();
+            return "0";
+        }
+
+        private void UpdateVariable(string scope, string key, string op, string val, IActionableItem? cmd, bool isNumber = false)
+        {
+            VariableStore store = (scope == "Local" && cmd != null) ? cmd.LocalVariables : Config.GlobalVariables;
+            
+            if (op == "Add to List")
+            {
+                var lst = store.Lists.FirstOrDefault(l => l.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                if (lst == null) { lst = new StringListPair { Key = key }; store.Lists.Add(lst); }
+                lst.Values.Add(val);
+                Config.Save();
+                return;
+            }
+            if (op == "Remove from List")
+            {
+                var lst = store.Lists.FirstOrDefault(l => l.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                if (lst != null) { lst.Values.Remove(val); Config.Save(); }
+                return;
+            }
+
+            var scalar = store.Scalars.FirstOrDefault(s => s.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            if (scalar == null) { scalar = new StringPair { Key = key, Value = "0" }; store.Scalars.Add(scalar); }
+
+            if (isNumber) scalar.IsNumber = true;
+
+            if (op == "Set") scalar.Value = val;
+            else if (op == "Set Random (Min-Max)")
+            {
+                var parts = val.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int min) && int.TryParse(parts[1].Trim(), out int max))
+                {
+                    if (min > max) { int temp = min; min = max; max = temp; }
+                    scalar.Value = _rng.Next(min, max + 1).ToString();
+                }
+            }
+            else if (op == "Add") 
+            { 
+                double sVal = 0;
+                double.TryParse(scalar.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out sVal);
+                if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double vVal)) 
+                    scalar.Value = (sVal + vVal).ToString(System.Globalization.CultureInfo.InvariantCulture); 
+            }
+            else if (op == "Subtract") 
+            { 
+                double sVal = 0;
+                double.TryParse(scalar.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out sVal);
+                if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double vVal)) 
+                    scalar.Value = (sVal - vVal).ToString(System.Globalization.CultureInfo.InvariantCulture); 
+            }
+            
+            Config.Save();
+        }
+
         private async Task HandleRewardRedemption(object? sender, ChannelPointsCustomRewardRedemptionArgs e)
         {
             var ev = e.Payload.Event;
             var redeemConfig = Config.Redeems?.FirstOrDefault(r => r.Id == ev.Reward.Id);
             if (redeemConfig != null && redeemConfig.IsEnabled)
             {
+                if (redeemConfig.UseActionBlocks)
+                {
+                    if (redeemConfig.GenerateRandomVariable && !string.IsNullOrWhiteSpace(redeemConfig.RandomTargetVariable))
+                    {
+                        double min = redeemConfig.RandomMin;
+                        double max = redeemConfig.RandomMax;
+                        if (min > max) { double tmp = min; min = max; max = tmp; }
+                        string rVal;
+                        if (redeemConfig.RandomIsFloat)
+                        {
+                            double r = min + (_rng.NextDouble() * (max - min));
+                            rVal = r.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                        else
+                        {
+                            int r = _rng.Next((int)min, (int)max + 1);
+                            rVal = r.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                        UpdateVariable(redeemConfig.RandomTargetScope, redeemConfig.RandomTargetVariable, "Set", rVal, redeemConfig, true);
+                    }
+                    await ExecuteActionBlocks(redeemConfig, "", ev.UserName, ev.UserInput ?? "");
+                    return;
+                }
+
                 if (!string.IsNullOrEmpty(redeemConfig.TriggerPlugin) && redeemConfig.TriggerPlugin != "None")
                 {
                     PluginServer.Instance.NotifyTriggerEvent("redeem", redeemConfig.Name, redeemConfig.WebsocketParam, ev.UserName, ev.UserInput ?? "", redeemConfig.TriggerPlugin);
                 }
                 string msg = ev.UserInput ?? "";
-                if (!string.IsNullOrWhiteSpace(msg))
+                if (!string.IsNullOrWhiteSpace(msg) || !string.IsNullOrWhiteSpace(redeemConfig.FixedText))
                 {
-                    msg = ProcessScript(msg, ev.UserName, msg, "");
+                    // For legacy redeems, use FixedText if available, otherwise just use the msg
+                    string scriptToProcess = string.IsNullOrWhiteSpace(redeemConfig.FixedText) ? msg : redeemConfig.FixedText;
+                    msg = ProcessScript(scriptToProcess, ev.UserName, msg, "");
                     AddToHistory(ev.UserName, msg, "Reward");
-                    await TtsEngine.Instance.ProcessAndSpeak(msg, redeemConfig.ShowOnOverlay ? "redeems" : "hidden");
+                    await TtsEngine.Instance.ProcessAndSpeak(msg, "hidden");
                 }
             }
         }
@@ -222,17 +430,61 @@ namespace JakeyTTS
         /// FIXED: Intercepts all text templates before writing out onto chat payloads, 
         /// recursively swapping out active plugin variables matching the {} layout configuration model rules.
         /// </summary>
-        public string ProcessScript(string script, string sender, string fullMessage, string trigger = "")
+        public string ProcessScript(string script, string sender, string fullMessage, string trigger = "", IActionableItem? cmd = null)
         {
             if (string.IsNullOrEmpty(script)) return fullMessage;
 
             string res = script;
+            
+            string[] args = fullMessage.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (!string.IsNullOrEmpty(trigger) && args.Length > 0 && args[0].Equals(trigger, StringComparison.OrdinalIgnoreCase))
+                args = args.Skip(1).ToArray();
+
             if (!string.IsNullOrEmpty(sender))
             {
                 res = res.Replace("{user}", sender, StringComparison.OrdinalIgnoreCase);
             }
+            
+            if (args.Length > 0)
+            {
+                res = res.Replace("{target}", string.Join(" ", args), StringComparison.OrdinalIgnoreCase);
+            }
+            else
+            {
+                res = res.Replace("{target}", "", StringComparison.OrdinalIgnoreCase);
+            }
+
+            res = Regex.Replace(res, @"\{(\d+)\}", m =>
+            {
+                if (int.TryParse(m.Groups[1].Value, out int idx) && idx >= 1 && idx <= args.Length)
+                    return args[idx - 1];
+                return "";
+            });
 
             res = Regex.Replace(res, @"\{random:(\d+)-(\d+)\}", m => _rng.Next(int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value) + 1).ToString());
+            
+            // New Variable Engine Evaluator
+            res = Regex.Replace(res, @"\{(global|local):([a-zA-Z0-9_\-]+)(:random)?\}", m =>
+            {
+                string scope = m.Groups[1].Value;
+                string key = m.Groups[2].Value;
+                bool isRandom = m.Groups[3].Success;
+
+                VariableStore store = (scope.Equals("local", StringComparison.OrdinalIgnoreCase) && cmd != null) ? cmd.LocalVariables : Config.GlobalVariables;
+                
+                if (isRandom)
+                {
+                    var lst = store.Lists.FirstOrDefault(l => l.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                    if (lst != null && lst.Values.Count > 0) return lst.Values[_rng.Next(lst.Values.Count)];
+                    return "";
+                }
+                else
+                {
+                    var scalar = store.Scalars.FirstOrDefault(s => s.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                    if (scalar != null) return scalar.Value;
+                    return "0";
+                }
+            }, RegexOptions.IgnoreCase);
 
             // FIXED ATOMIC INTERCEPTOR STEP: Evaluates curly braces elements and replaces them natively via memory dictionary cache map handles
             if (res.Contains("{"))

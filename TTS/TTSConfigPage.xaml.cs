@@ -54,9 +54,11 @@ namespace JakeyTTS
             AudioDeviceCombo3.SelectedItem = devices.Contains(_service.Config.SelectedAudioDevice3)
                 ? _service.Config.SelectedAudioDevice3 : "None";
 
-            LanguageCombo.ItemsSource = _languageMap.Keys.ToList();
+            var languages = _languageMap.Keys.ToList();
+            languages.Add("Custom");
+            LanguageCombo.ItemsSource = languages;
             int savedIndex = _service.Config.LanguageIndex;
-            LanguageCombo.SelectedIndex = (savedIndex >= 0 && savedIndex < _languageMap.Count) ? savedIndex : 0;
+            LanguageCombo.SelectedIndex = (savedIndex >= 0 && savedIndex < languages.Count) ? savedIndex : 0;
 
             LoadVoicesForSelectedLanguage();
 
@@ -73,29 +75,56 @@ namespace JakeyTTS
             if (LanguageCombo.SelectedItem == null) return;
 
             string selectedKey = LanguageCombo.SelectedItem.ToString();
-            if (!_languageMap.TryGetValue(selectedKey, out var selectedLang)) return;
 
             try
             {
-                var voices = KokoroVoiceManager.GetVoices(selectedLang);
-
-                if (voices != null && voices.Any())
+                if (selectedKey == "Custom")
                 {
-                    var voiceNames = voices.Select(v => v.Name).OrderBy(n => n).ToList();
-                    VoiceCombo.ItemsSource = voiceNames;
+                    var voices = _service.Config.MixedVoices;
+                    if (voices != null && voices.Any(v => v.IsEnabled))
+                    {
+                        var voiceNames = voices.Where(v => v.IsEnabled).Select(v => v.Name).OrderBy(n => n).ToList();
+                        VoiceCombo.ItemsSource = voiceNames;
 
-                    var savedVoice = _service.Config.DefaultVoice;
-
-                    if (!string.IsNullOrEmpty(savedVoice) && voiceNames.Contains(savedVoice))
-                        VoiceCombo.SelectedItem = savedVoice;
+                        var savedVoice = _service.Config.DefaultVoice;
+                        if (!string.IsNullOrEmpty(savedVoice) && voiceNames.Contains(savedVoice))
+                            VoiceCombo.SelectedItem = savedVoice;
+                        else
+                            VoiceCombo.SelectedIndex = 0;
+                        
+                        LogUI($"✅ Custom voices loaded.");
+                    }
                     else
+                    {
+                        VoiceCombo.ItemsSource = new List<string> { "No custom voices available." };
                         VoiceCombo.SelectedIndex = 0;
-
-                    LogUI($"✅ Voices loaded for {selectedKey}.");
+                    }
                 }
                 else
                 {
-                    VoiceCombo.ItemsSource = new List<string> { "Engine loading voices..." };
+                    if (!_languageMap.TryGetValue(selectedKey, out var selectedLang)) return;
+
+                    var voices = KokoroVoiceManager.GetVoices(selectedLang);
+
+                    if (voices != null && voices.Any())
+                    {
+                        var voiceNames = voices.Select(v => v.Name).OrderBy(n => n).ToList();
+                        VoiceCombo.ItemsSource = voiceNames;
+
+                        var savedVoice = _service.Config.DefaultVoice;
+
+                        if (!string.IsNullOrEmpty(savedVoice) && voiceNames.Contains(savedVoice))
+                            VoiceCombo.SelectedItem = savedVoice;
+                        else
+                            VoiceCombo.SelectedIndex = 0;
+
+                        LogUI($"✅ Voices loaded for {selectedKey}.");
+                    }
+                    else
+                    {
+                        VoiceCombo.ItemsSource = new List<string> { "Engine loading voices..." };
+                        VoiceCombo.SelectedIndex = 0;
+                    }
                 }
             }
             catch (Exception ex) { LogUI($"❌ Error loading voices: {ex.Message}"); }
@@ -111,7 +140,7 @@ namespace JakeyTTS
 
         private void VoiceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (VoiceCombo.SelectedItem is string voiceName && voiceName != "Engine loading voices...")
+            if (VoiceCombo.SelectedItem is string voiceName && voiceName != "Engine loading voices..." && voiceName != "No custom voices available.")
             {
                 _service.Config.DefaultVoice = voiceName;
                 _service.Config.Save();
@@ -185,7 +214,6 @@ namespace JakeyTTS
         {
             if (!string.IsNullOrWhiteSpace(TestInput.Text))
             {
-                // FIXED: Redirigido a TtsEngine
                 await TtsEngine.Instance.ProcessAndSpeak(TestInput.Text, "test");
             }
         }

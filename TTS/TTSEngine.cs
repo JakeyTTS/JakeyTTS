@@ -172,11 +172,29 @@ namespace JakeyTTS
             catch { }
         }
 
+        private string PreProcessDictionary(string text)
+        {
+            if (Config.PronunciationDictionary == null || !Config.PronunciationDictionary.Any(p => p.IsEnabled)) return text;
+            foreach (var p in Config.PronunciationDictionary.Where(x => x.IsEnabled && !string.IsNullOrWhiteSpace(x.Word)))
+            {
+                if (p.IsRegex)
+                {
+                    try { text = Regex.Replace(text, p.Word, p.Replacement ?? ""); } catch { }
+                }
+                else
+                {
+                    text = Regex.Replace(text, $@"\b{Regex.Escape(p.Word)}\b", p.Replacement ?? "", RegexOptions.IgnoreCase);
+                }
+            }
+            return text;
+        }
+
         public async Task<byte[]?> SynthesizeSilentAsync(string text, string voiceName, float speed = 1.0f)
         {
             if (Synthesizer == null || string.IsNullOrWhiteSpace(text)) return null;
 
             text = PreProcessGlobalVariables(text);
+            text = PreProcessDictionary(text);
 
             var allVoices = KokoroVoiceManager.Voices;
             if (allVoices == null || !allVoices.Any()) return null;
@@ -187,7 +205,7 @@ namespace JakeyTTS
             try
             {
                 var defaultVoiceName = Config.DefaultVoice;
-                var baseVoice = allVoices.FirstOrDefault(v => v.Name.Equals(defaultVoiceName, StringComparison.OrdinalIgnoreCase)) ?? allVoices.First();
+                var baseVoice = ResolveVoice(defaultVoiceName) ?? allVoices.First();
 
                 KokoroVoice currentActiveVoice = ResolveVoice(voiceName) ?? baseVoice;
                 float currentSpeed = speed;
@@ -277,6 +295,7 @@ namespace JakeyTTS
             if (Synthesizer == null || string.IsNullOrWhiteSpace(input)) return;
 
             input = PreProcessGlobalVariables(input);
+            input = PreProcessDictionary(input);
 
             var allVoices = KokoroVoiceManager.Voices;
             if (allVoices == null || !allVoices.Any()) return;
@@ -290,7 +309,7 @@ namespace JakeyTTS
             try
             {
                 var defaultVoiceName = Config.DefaultVoice;
-                var baseVoice = allVoices.FirstOrDefault(v => v.Name.Equals(defaultVoiceName, StringComparison.OrdinalIgnoreCase)) ?? allVoices.First();
+                var baseVoice = ResolveVoice(defaultVoiceName) ?? allVoices.First();
 
                 KokoroVoice currentActiveVoice = baseVoice;
                 float currentSpeed = 1.0f;

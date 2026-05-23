@@ -14,13 +14,34 @@ namespace JakeyTTS.Views
     public sealed partial class SoundEffectsPage : Page
     {
         public ObservableCollection<SoundEffectItem> SfxList { get; set; }
+        public ObservableCollection<SoundEffectItem> FilteredSfxList { get; set; }
 
         public SoundEffectsPage()
         {
             this.InitializeComponent();
             var existing = TwitchService.Instance.Config.SoundEffects ?? new List<SoundEffectItem>();
             SfxList = new ObservableCollection<SoundEffectItem>(existing);
-            SfxTable.ItemsSource = SfxList;
+            FilteredSfxList = new ObservableCollection<SoundEffectItem>(existing);
+        }
+
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ApplyFilter();
+        }
+
+        private void ApplyFilter()
+        {
+            string query = SearchBox.Text?.ToLower() ?? "";
+            FilteredSfxList.Clear();
+            foreach (var item in SfxList)
+            {
+                if (string.IsNullOrWhiteSpace(query) || 
+                    (item.TagName?.ToLower().Contains(query) == true) || 
+                    (item.FileName?.ToLower().Contains(query) == true))
+                {
+                    FilteredSfxList.Add(item);
+                }
+            }
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -41,12 +62,15 @@ namespace JakeyTTS.Views
                 string destPath = Path.Combine(soundsDir, file.Name);
                 File.Copy(file.Path, destPath, true);
 
-                SfxList.Add(new SoundEffectItem
+                var newItem = new SoundEffectItem
                 {
                     TagName = Path.GetFileNameWithoutExtension(file.Name).Replace(" ", "").ToLower(),
                     FileName = file.Name,
                     IsEnabled = true
-                });
+                };
+                SfxList.Add(newItem);
+                ApplyFilter();
+                
                 MainWindow.Instance.Log($"🎵 Imported SFX: {file.Name}");
             }
         }
@@ -56,17 +80,16 @@ namespace JakeyTTS.Views
             if (sender is Button btn && btn.DataContext is SoundEffectItem item)
             {
                 if (string.IsNullOrEmpty(item.TagName)) return;
-
-                // FIXED: Redirigido de forma segura al nuevo Singleton TtsEngine
                 await TtsEngine.Instance.PlaySoundEffect(item.TagName);
             }
         }
 
         private void Delete_Click(object sender, RoutedEventArgs e)
         {
-            if (SfxTable.SelectedItem is SoundEffectItem selected)
+            if (sender is Button btn && btn.DataContext is SoundEffectItem selected)
             {
                 SfxList.Remove(selected);
+                FilteredSfxList.Remove(selected);
             }
         }
 
@@ -78,4 +101,3 @@ namespace JakeyTTS.Views
         }
     }
 }
-

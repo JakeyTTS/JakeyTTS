@@ -63,6 +63,8 @@
                     <CheckBox x:Name="ChkBackupRewards" Content="Custom Rewards" IsChecked="True"/>
                     <CheckBox x:Name="ChkBackupSFX" Content="Sound Effects &amp; Audio Files" IsChecked="True"/>
                     <CheckBox x:Name="ChkBackupMelodies" Content="Custom Melodies" IsChecked="True"/>
+                    <CheckBox x:Name="ChkBackupMixedVoices" Content="Mixed Voices" IsChecked="True"/>
+                    <CheckBox x:Name="ChkBackupDictionary" Content="Pronunciation Dictionary" IsChecked="True"/>
                 </StackPanel>
 
                 <TextBlock Text="Import Mode:" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,0"/>

@@ -104,6 +104,15 @@ namespace JakeyTTS
                     workingDir = AppContext.BaseDirectory;
                 }
 
+                string processName = Path.GetFileNameWithoutExtension(absolutePath);
+                var existingProcesses = Process.GetProcessesByName(processName);
+                if (existingProcesses.Length > 0)
+                {
+                    MainWindow.Instance?.Log($"ℹ️ Plugin '{plugin.Name}' is already running.");
+                    _localPluginProcesses[plugin.Id] = existingProcesses[0];
+                    return true;
+                }
+
                 // FIXED: Hardcoded to FALSE and NORMAL to bypass stale database properties.
                 // This guarantees the extension process launches with full interactive UI views visible on top.
                 var startInfo = new ProcessStartInfo

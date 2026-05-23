@@ -20,8 +20,200 @@ namespace JakeyTTS.Core
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
+    public class VariableStore : BaseNotify
+    {
+        public ObservableCollection<StringPair> Scalars { get; set; } = new();
+        public ObservableCollection<StringListPair> Lists { get; set; } = new();
+    }
 
-    public class CommandItem
+    public class StringPair : BaseNotify
+    {
+        private string _key = "";
+        public string Key { get => _key; set { _key = value; OnPropertyChanged(); } }
+
+        private string _value = "";
+        public string Value { get => _value; set { _value = value; OnPropertyChanged(); } }
+
+        private bool _isNumber = false;
+        public bool IsNumber 
+        { 
+            get => _isNumber; 
+            set 
+            { 
+                _isNumber = value; 
+                OnPropertyChanged(); 
+                OnPropertyChanged(nameof(NumberVisibility));
+                OnPropertyChanged(nameof(TextVisibility));
+            } 
+        }
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Visibility NumberVisibility => _isNumber ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Visibility TextVisibility => !_isNumber ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+        [JsonIgnore]
+        public double NumericValue
+        {
+            get
+            {
+                if (double.TryParse(_value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double res)) return res;
+                return 0;
+            }
+            set
+            {
+                Value = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public class StringListPair : BaseNotify
+    {
+        private string _key = "";
+        public string Key { get => _key; set { _key = value; OnPropertyChanged(); } }
+
+        public ObservableCollection<string> Values { get; set; } = new();
+    }
+
+    public enum CommandCondition
+    {
+        Always,
+        IfUserProvidedMessage,
+        IfNoMessageProvided,
+        IfVariableMatch,
+        IfVariableListIsEmpty,
+        IfRandomChance
+    }
+
+    public interface IActionableItem : System.ComponentModel.INotifyPropertyChanged
+    {
+        bool UseActionBlocks { get; set; }
+        bool GenerateRandomVariable { get; set; }
+        string RandomTargetScope { get; set; }
+        string RandomTargetVariable { get; set; }
+        bool RandomIsFloat { get; set; }
+        double RandomMin { get; set; }
+        string RandomMinString { get; set; }
+        double RandomMax { get; set; }
+        string RandomMaxString { get; set; }
+        VariableStore LocalVariables { get; set; }
+        ObservableCollection<CommandAction> Actions { get; set; }
+        System.Collections.ObjectModel.ObservableCollection<string> ScopeOptions { get; }
+        void UpgradeToBlocks();
+    }
+
+    public class CommandAction : BaseNotify
+    {
+        private CommandCondition _condition = CommandCondition.Always;
+        public CommandCondition Condition { get => _condition; set { _condition = value; OnPropertyChanged(); } }
+
+        // Condition matching
+        private string _conditionVariable = "";
+        public string ConditionVariable { get => _conditionVariable; set { _conditionVariable = value; OnPropertyChanged(); } }
+
+        private string _conditionOperator = "==";
+        public string ConditionOperator { get => _conditionOperator; set { _conditionOperator = value; OnPropertyChanged(); } }
+
+        private string _conditionValue = "";
+        public string ConditionValue { get => _conditionValue; set { _conditionValue = value; OnPropertyChanged(); } }
+
+        // Outputs
+        private string _response = "";
+        public string Response { get => _response; set { _response = value; OnPropertyChanged(); } }
+
+        private bool _shouldSpeak = false;
+        public bool ShouldSpeak { get => _shouldSpeak; set { _shouldSpeak = value; OnPropertyChanged(); } }
+
+        private bool _shouldReplyInChat = false;
+        public bool ShouldReplyInChat { get => _shouldReplyInChat; set { _shouldReplyInChat = value; OnPropertyChanged(); } }
+
+        private bool _replyAsBot = false;
+        public bool ReplyAsBot { get => _replyAsBot; set { _replyAsBot = value; OnPropertyChanged(); } }
+
+        private string _triggerPlugin = "None";
+        public string TriggerPlugin { get => _triggerPlugin; set { _triggerPlugin = value; OnPropertyChanged(); } }
+
+        private string _websocketParam = "";
+        public string WebsocketParam { get => _websocketParam; set { _websocketParam = value; OnPropertyChanged(); } }
+
+        // Wait
+        private int _waitMs = 0;
+        public int WaitMs { get => _waitMs; set { _waitMs = value; OnPropertyChanged(); } }
+
+        // Variable Update
+        private bool _updateVariable = false;
+        public bool UpdateVariable { get => _updateVariable; set { _updateVariable = value; OnPropertyChanged(); } }
+
+        private bool _updateVariableFirst = false;
+        public bool UpdateVariableFirst { get => _updateVariableFirst; set { _updateVariableFirst = value; OnPropertyChanged(); } }
+
+        private string _targetVariable = "";
+        public string TargetVariable { get => _targetVariable; set { _targetVariable = value; OnPropertyChanged(); } }
+
+        private string _variableScope = "Global";
+        public string VariableScope 
+        { 
+            get => _variableScope; 
+            set { _variableScope = value; OnPropertyChanged(); OnPropertyChanged(nameof(ScopedVariables)); } 
+        }
+
+        [JsonIgnore]
+        public IActionableItem ParentItem { get; set; }
+
+        private string _conditionScope = "Local";
+        public string ConditionScope { get => _conditionScope; set { _conditionScope = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConditionScopedVariables)); } }
+
+        [JsonIgnore]
+        public ObservableCollection<string> ConditionScopedVariables
+        {
+            get
+            {
+                var list = new ObservableCollection<string>();
+                VariableStore store = (ConditionScope == "Local" && ParentItem != null) ? ParentItem.LocalVariables : TwitchService.Instance.Config.GlobalVariables;
+                if (store != null)
+                {
+                    foreach (var s in store.Scalars) list.Add(s.Key);
+                    foreach (var l in store.Lists) list.Add(l.Key);
+                }
+                if (ParentItem != null && ParentItem.GenerateRandomVariable && ParentItem.RandomTargetScope == ConditionScope)
+                {
+                    if (!list.Contains(ParentItem.RandomTargetVariable)) list.Add(ParentItem.RandomTargetVariable);
+                }
+                return list;
+            }
+        }
+
+        [JsonIgnore]
+        public ObservableCollection<string> ScopedVariables
+        {
+            get
+            {
+                var list = new ObservableCollection<string>();
+                VariableStore store = (VariableScope == "Local" && ParentItem != null) ? ParentItem.LocalVariables : TwitchService.Instance.Config.GlobalVariables;
+                if (store != null)
+                {
+                    foreach (var s in store.Scalars) list.Add(s.Key);
+                    foreach (var l in store.Lists) list.Add(l.Key);
+                }
+                if (ParentItem != null && ParentItem.GenerateRandomVariable && ParentItem.RandomTargetScope == VariableScope)
+                {
+                    if (!list.Contains(ParentItem.RandomTargetVariable)) list.Add(ParentItem.RandomTargetVariable);
+                }
+                return list;
+            }
+        }
+
+        private string _variableOperator = "Set";
+        public string VariableOperator { get => _variableOperator; set { _variableOperator = value; OnPropertyChanged(); } }
+
+        private string _variableValue = "";
+        public string VariableValue { get => _variableValue; set { _variableValue = value; OnPropertyChanged(); } }
+    }
+
+
+    public class CommandItem : BaseNotify, IActionableItem
     {
         public bool IsEnabled { get; set; } = true;
         public string Trigger { get; set; } = string.Empty;
@@ -31,7 +223,77 @@ namespace JakeyTTS.Core
         public bool ReplyAsBot { get; set; } = false;
         public bool SendWebsocket { get; set; } = false;
         public string WebsocketParam { get; set; } = string.Empty;
-        public bool ShowOnOverlay { get; set; } = true;
+        
+        // Permissions
+        public bool AllowBroadcaster { get; set; } = true;
+        public bool AllowModerator { get; set; } = true;
+        public bool AllowVIP { get; set; } = true;
+        public bool AllowEveryone { get; set; } = true;
+
+        // Blocks System
+        private bool _useActionBlocks = false;
+        public bool UseActionBlocks
+        {
+            get => _useActionBlocks;
+            set { if (_useActionBlocks == value) return; _useActionBlocks = value; OnPropertyChanged(); }
+        }
+        
+        // Command Randomizer
+        private bool _generateRandomVariable = false;
+        public bool GenerateRandomVariable { get => _generateRandomVariable; set { _generateRandomVariable = value; OnPropertyChanged(); } }
+
+        private string _randomTargetScope = "Local";
+        public string RandomTargetScope { get => _randomTargetScope; set { _randomTargetScope = value; OnPropertyChanged(); } }
+
+        public System.Collections.ObjectModel.ObservableCollection<string> ScopeOptions { get; } = new System.Collections.ObjectModel.ObservableCollection<string> { "Local", "Global" };
+
+        private string _randomTargetVariable = "RandomRoll";
+        public string RandomTargetVariable { get => _randomTargetVariable; set { _randomTargetVariable = value; OnPropertyChanged(); } }
+        
+        private bool _randomIsFloat = false;
+        public bool RandomIsFloat { get => _randomIsFloat; set { _randomIsFloat = value; OnPropertyChanged(); } }
+
+        private double _randomMin = 1;
+        public double RandomMin { get => _randomMin; set { _randomMin = value; OnPropertyChanged(); OnPropertyChanged(nameof(RandomMinString)); } }
+
+        public string RandomMinString
+        {
+            get => _randomMin.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            set { if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val)) RandomMin = val; else OnPropertyChanged(); }
+        }
+
+        private double _randomMax = 100;
+        public double RandomMax { get => _randomMax; set { _randomMax = value; OnPropertyChanged(); OnPropertyChanged(nameof(RandomMaxString)); } }
+
+        public string RandomMaxString
+        {
+            get => _randomMax.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            set { if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val)) RandomMax = val; else OnPropertyChanged(); }
+        }
+        
+        public VariableStore LocalVariables { get; set; } = new();
+
+        public ObservableCollection<CommandAction> Actions { get; set; } = new();
+
+        public void UpgradeToBlocks()
+        {
+            if (UseActionBlocks) return;
+            Actions.Clear();
+
+            var newBlock = new CommandAction 
+            { 
+                Condition = CommandCondition.Always,
+                Response = Response,
+                ShouldSpeak = ShouldSpeak,
+                ShouldReplyInChat = ShouldReplyInChat,
+                ReplyAsBot = ReplyAsBot,
+                TriggerPlugin = TriggerPlugin,
+                WebsocketParam = WebsocketParam
+            };
+            
+            Actions.Add(newBlock);
+            UseActionBlocks = true;
+        }
 
         private string _triggerPlugin = "None";
         public string TriggerPlugin
@@ -53,7 +315,7 @@ namespace JakeyTTS.Core
     }
 
 
-    public class RedeemItem : BaseNotify
+    public class RedeemItem : BaseNotify, IActionableItem
     {
         public string Id { get; set; }
         public bool IsEnabled { get; set; } = true;
@@ -61,13 +323,6 @@ namespace JakeyTTS.Core
         public string FixedText { get; set; } = "{user} redeemed {target}";
         public bool ShouldReplyInChat { get; set; } = false;
         public bool ReplyAsBot { get; set; } = false;
-
-        private bool _showOnOverlay = true;
-        public bool ShowOnOverlay
-        {
-            get => _showOnOverlay;
-            set { if (_showOnOverlay == value) return; _showOnOverlay = value; OnPropertyChanged(); }
-        }
 
         private bool _sendWebsocket = false;
         public bool SendWebsocket
@@ -102,12 +357,108 @@ namespace JakeyTTS.Core
                 OnPropertyChanged();
             }
         }
+
+        // Blocks System
+        private bool _useActionBlocks = false;
+        public bool UseActionBlocks
+        {
+            get => _useActionBlocks;
+            set { if (_useActionBlocks == value) return; _useActionBlocks = value; OnPropertyChanged(); }
+        }
+        
+        // Command Randomizer
+        private bool _generateRandomVariable = false;
+        public bool GenerateRandomVariable { get => _generateRandomVariable; set { _generateRandomVariable = value; OnPropertyChanged(); } }
+
+        private string _randomTargetScope = "Local";
+        public string RandomTargetScope { get => _randomTargetScope; set { _randomTargetScope = value; OnPropertyChanged(); } }
+
+        public System.Collections.ObjectModel.ObservableCollection<string> ScopeOptions { get; } = new System.Collections.ObjectModel.ObservableCollection<string> { "Local", "Global" };
+
+        private string _randomTargetVariable = "RandomRoll";
+        public string RandomTargetVariable { get => _randomTargetVariable; set { _randomTargetVariable = value; OnPropertyChanged(); } }
+        
+        private bool _randomIsFloat = false;
+        public bool RandomIsFloat { get => _randomIsFloat; set { _randomIsFloat = value; OnPropertyChanged(); } }
+
+        private double _randomMin = 1;
+        public double RandomMin { get => _randomMin; set { _randomMin = value; OnPropertyChanged(); OnPropertyChanged(nameof(RandomMinString)); } }
+
+        public string RandomMinString
+        {
+            get => _randomMin.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            set { if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val)) RandomMin = val; else OnPropertyChanged(); }
+        }
+
+        private double _randomMax = 100;
+        public double RandomMax { get => _randomMax; set { _randomMax = value; OnPropertyChanged(); OnPropertyChanged(nameof(RandomMaxString)); } }
+
+        public string RandomMaxString
+        {
+            get => _randomMax.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            set { if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val)) RandomMax = val; else OnPropertyChanged(); }
+        }
+        
+        public VariableStore LocalVariables { get; set; } = new();
+
+        public ObservableCollection<CommandAction> Actions { get; set; } = new();
+
+        public void UpgradeToBlocks()
+        {
+            if (UseActionBlocks) return;
+            Actions.Clear();
+
+            var newBlock = new CommandAction 
+            { 
+                Condition = CommandCondition.Always,
+                Response = FixedText,
+                ShouldSpeak = true, // Redeems default to speak
+                ShouldReplyInChat = ShouldReplyInChat,
+                ReplyAsBot = ReplyAsBot,
+                TriggerPlugin = TriggerPlugin,
+                WebsocketParam = WebsocketParam
+            };
+            
+            Actions.Add(newBlock);
+            UseActionBlocks = true;
+        }
     }
 
     public class TriggerOption
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+    }
+
+    public class PronunciationItem : BaseNotify
+    {
+        private string _word = "";
+        public string Word
+        {
+            get => _word;
+            set { if (_word != value) { _word = value; OnPropertyChanged(); } }
+        }
+
+        private string _replacement = "";
+        public string Replacement
+        {
+            get => _replacement;
+            set { if (_replacement != value) { _replacement = value; OnPropertyChanged(); } }
+        }
+
+        private bool _isRegex;
+        public bool IsRegex
+        {
+            get => _isRegex;
+            set { if (_isRegex != value) { _isRegex = value; OnPropertyChanged(); } }
+        }
+
+        private bool _isEnabled = true;
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set { if (_isEnabled != value) { _isEnabled = value; OnPropertyChanged(); } }
+        }
     }
 
     public class TtsEntry
@@ -182,6 +533,8 @@ namespace JakeyTTS.Core
         private double _threshold = 0;
         public double Threshold { get => _threshold; set { _threshold = value; OnPropertyChanged(); } }
 
+
+
         private string _response = "";
         public string Response { get => _response; set { _response = value; OnPropertyChanged(); } }
 
@@ -229,6 +582,10 @@ namespace JakeyTTS.Core
     [JsonSerializable(typeof(UserActionsConfig))]
     [JsonSerializable(typeof(UserActionItem))]
     [JsonSerializable(typeof(List<UserActionItem>))]
+    [JsonSerializable(typeof(VariableStore))]
+    [JsonSerializable(typeof(CommandAction))]
+    [JsonSerializable(typeof(StringPair))]
+    [JsonSerializable(typeof(StringListPair))]
     [JsonSerializable(typeof(JsonElement))] // Needed for API Twitch responses
     internal partial class JakeyJsonContext : JsonSerializerContext
     {

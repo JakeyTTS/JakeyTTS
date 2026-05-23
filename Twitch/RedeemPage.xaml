@@ -5,7 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:WinUI.TableView"
+    xmlns:models="using:JakeyTTS.Core"
     mc:Ignorable="d">
 
     <Grid Margin="40">
@@ -21,42 +21,207 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-
-                <controls:TableView x:Name="RedeemsTable" 
-                                   AutoGenerateColumns="False"
-                                   SelectionMode="Single">
-                    <controls:TableView.Columns>
-                        <controls:TableViewCheckBoxColumn Header="On" Binding="{Binding IsEnabled}" Width="60"/>
-                        <controls:TableViewTextColumn Header="Reward Name" Binding="{Binding Name}" Width="180"/>
-                        <controls:TableViewTextColumn Header="TTS Response" Binding="{Binding FixedText}" Width="Auto" MinWidth="350"/>
-                        <controls:TableViewCheckBoxColumn Header="Chat" Binding="{Binding ShouldReplyInChat}" Width="80"/>
-                        <controls:TableViewCheckBoxColumn Header="Bot" Binding="{Binding ReplyAsBot}" Width="80"/>
-                        <controls:TableViewCheckBoxColumn Header="Overlay" Binding="{Binding ShowOnOverlay}" Width="80"/>
-                        <controls:TableViewTemplateColumn Header="Trigger Plugin" Width="160">
-                            <controls:TableViewTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding ElementName=PageRoot, Path=AvailableTriggers}"
-                                              SelectedValuePath="Id"
-                                              DisplayMemberPath="Name"
-                                              SelectedValue="{Binding TriggerPlugin, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              HorizontalAlignment="Stretch"
-                                              VerticalAlignment="Center"/>
-                                </DataTemplate>
-                            </controls:TableViewTemplateColumn.CellTemplate>
-                        </controls:TableViewTemplateColumn>
-                    </controls:TableView.Columns>
-                </controls:TableView>
-            </Border>
-
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,20,0,0">
-                <Button Click="Sync_Click" Padding="16,8">
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Channel Point Redeems" FontSize="28" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Click="Sync_Click" Padding="16,8" Margin="0,0,16,0">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <SymbolIcon Symbol="Refresh"/>
                         <TextBlock Text="Sync from Twitch"/>
                     </StackPanel>
                 </Button>
+                <Button Grid.Column="2" Content="Manage Variables" HorizontalAlignment="Right" Click="ManageVariables_Click" />
+            </Grid>
+
+            <ListView Grid.Row="1" x:Name="RedeemsListView" ItemsSource="{x:Bind RedeemList, Mode=OneWay}" SelectionMode="Single"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:RedeemItem">
+                        <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,12">
+                            <Expander.Header>
+                                <Grid HorizontalAlignment="Stretch" MinWidth="400">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleSwitch IsOn="{Binding IsEnabled, Mode=TwoWay}" Margin="0,0,16,0" VerticalAlignment="Center" MinWidth="0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Expander.Header>
+                            <Expander.Content>
+                                <StackPanel Spacing="20" Padding="16,12,16,24">
+                                    
+                                    <!-- Upgrade Row -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                            <Button Content="Local Variables" Click="LocalVariables_Click" ToolTipService.ToolTip="Manage Variables specific to this redeem" />
+                                            <Button Content="Upgrade to Blocks" 
+                                                    Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" 
+                                                    Click="UpgradeRedeem_Click" Style="{StaticResource AccentButtonStyle}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <ToggleSwitch Header="Enable Action Blocks (Advanced)" IsOn="{Binding UseActionBlocks, Mode=TwoWay}"/>
+
+                                    <!-- CLASSIC MODE -->
+                                    <Border Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" 
+                                            Background="{ThemeResource LayerFillColorAltBrush}" BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                                        <StackPanel Spacing="16">
+                                            <TextBox Header="Response Message" Text="{Binding FixedText, Mode=TwoWay}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="24">
+                                                <CheckBox Content="Reply in Chat" IsChecked="{Binding ShouldReplyInChat, Mode=TwoWay}"/>
+                                                <CheckBox Content="Reply as Bot" IsChecked="{Binding ReplyAsBot, Mode=TwoWay}"/>
+                                            </StackPanel>
+                                            
+                                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                                <ComboBox Header="Trigger Plugin" ItemsSource="{Binding ElementName=PageRoot, Path=AvailableTriggers}" SelectedValuePath="Id" DisplayMemberPath="Name" SelectedValue="{Binding TriggerPlugin, Mode=TwoWay}" Width="200"/>
+                                                <TextBox Header="Plugin Params" Text="{Binding WebsocketParam, Mode=TwoWay}" Width="300" PlaceholderText="Params (Optional)" Visibility="{Binding SendWebsocket, Converter={StaticResource BoolToVis}}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- BLOCKS MODE (Advanced) -->
+                                    <StackPanel Spacing="16" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="Advanced Action Blocks" FontWeight="SemiBold" FontSize="16"/>
+                                        
+                                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="16" Margin="0,0,0,8">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Command Randomizer (Optional)" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Generate a random number once when the command runs, allowing multiple blocks to evaluate the exact same roll. To reference it in your Action Blocks conditions, just select 'If Variable' and type the Target Variable name you choose here." FontSize="12" Opacity="0.7" TextWrapping="Wrap"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="24">
+                                                    <CheckBox Content="Generate Random Number Variable" IsChecked="{Binding GenerateRandomVariable, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Is Float (Decimals)" IsChecked="{Binding RandomIsFloat, Mode=TwoWay}" IsEnabled="{Binding GenerateRandomVariable, Mode=OneWay}"/>
+                                                </StackPanel>
+                                                
+                                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                                    <ComboBox Header="Scope" SelectedItem="{Binding RandomTargetScope, Mode=TwoWay}" ItemsSource="{Binding ScopeOptions}" Width="120" IsEnabled="{Binding GenerateRandomVariable, Mode=OneWay}"/>
+                                                    <TextBox Header="Target Variable" Text="{Binding RandomTargetVariable, Mode=TwoWay}" Width="150" IsEnabled="{Binding GenerateRandomVariable, Mode=OneWay}"/>
+                                                    <TextBox Header="Min Value" Text="{Binding RandomMinString, Mode=TwoWay}" Width="120" IsEnabled="{Binding GenerateRandomVariable, Mode=OneWay}"/>
+                                                    <TextBox Header="Max Value" Text="{Binding RandomMaxString, Mode=TwoWay}" Width="120" IsEnabled="{Binding GenerateRandomVariable, Mode=OneWay}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                        
+                                        <ItemsControl ItemsSource="{Binding Actions}" HorizontalAlignment="Stretch">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{ThemeResource LayerFillColorAltBrush}" 
+                                                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" 
+                                                            BorderThickness="4,1,1,1" CornerRadius="4" Margin="0,0,0,12" Padding="16">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- Row 0: Condition -->
+                                                            <StackPanel Orientation="Horizontal" Spacing="16" Grid.Row="0" Grid.Column="0">
+                                                                <ComboBox Header="If Condition" ItemsSource="{Binding ElementName=PageRoot, Path=Conditions}" SelectedItem="{Binding Condition, Mode=TwoWay}" Width="200">
+                                                                    <ComboBox.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <TextBlock Text="{Binding Converter={StaticResource EnumToStringConverter}}" />
+                                                                        </DataTemplate>
+                                                                    </ComboBox.ItemTemplate>
+                                                                </ComboBox>
+                                                                <ComboBox Header="Scope" SelectedItem="{Binding ConditionScope, Mode=TwoWay}" Width="100" Visibility="{Binding Condition, Converter={StaticResource EnumToVisConverter}, ConverterParameter='IfVariableMatch,IfVariableListIsEmpty'}">
+                                                                    <x:String>Local</x:String>
+                                                                    <x:String>Global</x:String>
+                                                                </ComboBox>
+                                                                <ComboBox Header="Variable Name" IsEditable="True" ItemsSource="{Binding ConditionScopedVariables}" Text="{Binding ConditionVariable, Mode=TwoWay}" Width="150" PlaceholderText="Var Name" Visibility="{Binding Condition, Converter={StaticResource EnumToVisConverter}, ConverterParameter='IfVariableMatch,IfVariableListIsEmpty'}"/>
+                                                                <ComboBox Header="Operator" SelectedItem="{Binding ConditionOperator, Mode=TwoWay}" Width="120" Visibility="{Binding Condition, Converter={StaticResource EnumToVisConverter}, ConverterParameter='IfVariableMatch'}">
+                                                                    <x:String>==</x:String>
+                                                                    <x:String>!=</x:String>
+                                                                    <x:String>&gt;</x:String>
+                                                                    <x:String>&lt;</x:String>
+                                                                    <x:String>Contains</x:String>
+                                                                </ComboBox>
+                                                                <TextBox Header="Value" Text="{Binding ConditionValue, Mode=TwoWay}" Width="150" PlaceholderText="Value to check" Visibility="{Binding Condition, Converter={StaticResource EnumToVisConverter}, ConverterParameter='IfVariableMatch,IfRandomChance'}"/>
+                                                            </StackPanel>
+
+                                                            <Button Grid.Row="0" Grid.RowSpan="4" Grid.Column="1" Background="Transparent" Click="DeleteAction_Click" VerticalAlignment="Top" Margin="16,0,0,0" ToolTipService.ToolTip="Remove Block">
+                                                                <SymbolIcon Symbol="Cancel" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                            </Button>
+
+                                                            <!-- Row 1: Message / TTS / Chat -->
+                                                            <StackPanel Spacing="12" Grid.Row="1" Grid.Column="0" Margin="0,16,0,0">
+                                                                <TextBox Header="Response Message" Text="{Binding Response, Mode=TwoWay}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"/>
+                                                                <StackPanel Orientation="Horizontal" Spacing="24">
+                                                                    <CheckBox Content="Speak (TTS)" IsChecked="{Binding ShouldSpeak, Mode=TwoWay}"/>
+                                                                    <CheckBox Content="Reply in Chat" IsChecked="{Binding ShouldReplyInChat, Mode=TwoWay}"/>
+                                                                    <CheckBox Content="Reply as Bot" IsChecked="{Binding ReplyAsBot, Mode=TwoWay}"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!-- Row 2: Trigger Plugin -->
+                                                            <StackPanel Orientation="Horizontal" Spacing="16" Grid.Row="2" Grid.Column="0" Margin="0,16,0,0">
+                                                                <ComboBox Header="Trigger Plugin" ItemsSource="{Binding ElementName=PageRoot, Path=AvailableTriggers}" SelectedValuePath="Id" DisplayMemberPath="Name" SelectedValue="{Binding TriggerPlugin, Mode=TwoWay}" Width="200"/>
+                                                                <TextBox Header="Plugin Params" Text="{Binding WebsocketParam, Mode=TwoWay}" Width="300" PlaceholderText="Params (Optional)" Visibility="{Binding TriggerPlugin, Converter={StaticResource PluginToVisConverter}}"/>
+                                                            </StackPanel>
+
+                                                            <!-- Row 3: Variables and Pause -->
+                                                            <StackPanel Orientation="Horizontal" Spacing="16" Grid.Row="3" Grid.Column="0" Margin="0,16,0,0">
+                                                                <StackPanel Orientation="Vertical" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                                                                    <CheckBox Content="Update Variable" IsChecked="{Binding UpdateVariable, Mode=TwoWay}"/>
+                                                                    <CheckBox Content="Update First?" IsChecked="{Binding UpdateVariableFirst, Mode=TwoWay}" IsEnabled="{Binding UpdateVariable, Mode=OneWay}" FontSize="12" MinHeight="24" Margin="0,-8,0,0"/>
+                                                                    <TextBlock Text="Note: To add/subtract numbers, var must be marked 'Is Number'." FontSize="11" Opacity="0.6" Margin="0,4,0,0" Width="140" TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <ComboBox Header="Variable" IsEditable="True" ItemsSource="{Binding ScopedVariables}" Text="{Binding TargetVariable, Mode=TwoWay}" Width="150" IsEnabled="{Binding UpdateVariable, Mode=OneWay}"/>
+                                                                <ComboBox Header="Scope" SelectedItem="{Binding VariableScope, Mode=TwoWay}" Width="120" IsEnabled="{Binding UpdateVariable, Mode=OneWay}">
+                                                                    <x:String>Global</x:String>
+                                                                    <x:String>Local</x:String>
+                                                                </ComboBox>
+                                                                <ComboBox Header="Operation" SelectedItem="{Binding VariableOperator, Mode=TwoWay}" Width="150" IsEnabled="{Binding UpdateVariable, Mode=OneWay}">
+                                                                    <x:String>Set</x:String>
+                                                                    <x:String>Set Random (Min-Max)</x:String>
+                                                                    <x:String>Add</x:String>
+                                                                    <x:String>Subtract</x:String>
+                                                                    <x:String>Add to List</x:String>
+                                                                    <x:String>Remove from List</x:String>
+                                                                </ComboBox>
+                                                                <TextBox Header="Value" Text="{Binding VariableValue, Mode=TwoWay}" Width="150" IsEnabled="{Binding UpdateVariable, Mode=OneWay}"/>
+                                                                
+                                                                <Border Width="1" Background="{ThemeResource SurfaceStrokeColorDefaultBrush}" Margin="16,0"/>
+                                                                
+                                                                <NumberBox Header="Wait / Delay (ms)" Value="{Binding WaitMs, Mode=TwoWay}" SpinButtonPlacementMode="Compact" Minimum="0" Width="150"/>
+                                                            </StackPanel>
+
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        
+                                        <Button Click="AddAction_Click" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Left">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Add"/>
+                                                <TextBlock Text="Add Block"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+
+                                </StackPanel>
+                            </Expander.Content>
+                        </Expander>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,20,0,0" HorizontalAlignment="Right">
                 <Button Content="Save All Changes" Click="Save_Click" Style="{StaticResource AccentButtonStyle}" Padding="16,8" Width="160"/>
             </StackPanel>
         </Grid>

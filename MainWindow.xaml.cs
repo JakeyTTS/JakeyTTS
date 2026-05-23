@@ -137,7 +137,7 @@ namespace JakeyTTS
             if (item?.Tag == null) return;
 
             string tag = item.Tag.ToString();
-            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag == "UserActions" || tag == "Plugins" || tag == "Keybinds") ? null : item.Content;
+            sender.Header = (tag == "Home" || tag == "Melodies" || tag == "MixedVoices" || tag == "UserActions" || tag == "Plugins" || tag == "Keybinds" || tag == "Commands" || tag == "Rewards" || tag == "SFX" || tag == "Dictionary") ? null : item.Content;
 
             switch (tag)
             {
@@ -170,6 +170,9 @@ namespace JakeyTTS
                     break;
                 case "MixedVoices":
                     ContentFrame.Navigate(typeof(JakeyTTS.MixVoices.MixedVoicesPage));
+                    break;
+                case "Dictionary":
+                    ContentFrame.Navigate(typeof(DictionaryPage));
                     break;
                 case "Plugins":
                     ContentFrame.Navigate(typeof(PluginsPage));

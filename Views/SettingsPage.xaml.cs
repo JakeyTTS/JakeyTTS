@@ -94,6 +94,8 @@ namespace JakeyTTS.Views
                 if (ChkBackupCommands.IsChecked == false) configCopy.Commands.Clear();
                 if (ChkBackupRewards.IsChecked == false) configCopy.Redeems.Clear();
                 if (ChkBackupSFX.IsChecked == false) configCopy.SoundEffects.Clear();
+                if (ChkBackupMixedVoices.IsChecked == false) configCopy.MixedVoices.Clear();
+                if (ChkBackupDictionary.IsChecked == false) configCopy.PronunciationDictionary.Clear();
 
                 string json = JsonSerializer.Serialize(configCopy, JakeyJsonContext.Default.AppConfig);
                 File.WriteAllText(Path.Combine(tempPath, "config_backup.json"), json);
@@ -190,7 +192,31 @@ namespace JakeyTTS.Views
                         else _service.Config.SoundEffects = imported.SoundEffects;
                     }
 
-                    // 4. Melodies (Files + Service Refresh)
+                    // 4. Mixed Voices
+                    if (ChkBackupMixedVoices.IsChecked == true)
+                    {
+                        if (isCombine)
+                        {
+                            foreach (var mv in imported.MixedVoices)
+                                if (!_service.Config.MixedVoices.Any(m => m.Name == mv.Name))
+                                    _service.Config.MixedVoices.Add(mv);
+                        }
+                        else _service.Config.MixedVoices = imported.MixedVoices;
+                    }
+
+                    // 5. Dictionary
+                    if (ChkBackupDictionary.IsChecked == true)
+                    {
+                        if (isCombine)
+                        {
+                            foreach (var dict in imported.PronunciationDictionary)
+                                if (!_service.Config.PronunciationDictionary.Any(d => d.Word == dict.Word))
+                                    _service.Config.PronunciationDictionary.Add(dict);
+                        }
+                        else _service.Config.PronunciationDictionary = imported.PronunciationDictionary;
+                    }
+
+                    // 6. Melodies (Files + Service Refresh)
                     if (ChkBackupMelodies.IsChecked == true)
                     {
                         string melodiesDir = Path.Combine(AppConfig.BaseFolder, "melodies");

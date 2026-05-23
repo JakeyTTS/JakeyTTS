@@ -1,4 +1,4 @@
-<Page x:Class="JakeyTTS.Views.SoundEffectsPage"
+<Page x:Class="JakeyTTS.Views.DictionaryPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,39 +23,43 @@
             <Grid Grid.Row="0" Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Sound Effects" FontSize="28" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <TextBox Grid.Column="1" x:Name="SearchBox" PlaceholderText="Search tag or file..." TextChanged="SearchBox_TextChanged" VerticalAlignment="Center"/>
+                <TextBlock Text="Pronunciation Dictionary" FontSize="28" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <Button Grid.Column="1" Click="AddRule_Click" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <SymbolIcon Symbol="Add"/>
+                        <TextBlock Text="Add New Rule"/>
+                    </StackPanel>
+                </Button>
             </Grid>
 
-            <ListView Grid.Row="1" x:Name="SfxListView" ItemsSource="{x:Bind FilteredSfxList, Mode=OneWay}" 
+            <ListView Grid.Row="1" x:Name="DictionaryListView" ItemsSource="{x:Bind DictionaryList, Mode=OneWay}" 
                       SelectionMode="None" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                 <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="models:SoundEffectItem">
+                    <DataTemplate x:DataType="models:PronunciationItem">
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1" CornerRadius="8" Margin="0,0,0,8" Padding="12">
                             <Grid HorizontalAlignment="Stretch">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/> <!-- Toggle -->
-                                    <ColumnDefinition Width="Auto"/> <!-- Play -->
-                                    <ColumnDefinition Width="200"/>   <!-- Tag Name -->
-                                    <ColumnDefinition Width="*"/>      <!-- File Name -->
+                                    <ColumnDefinition Width="200"/>   <!-- Word -->
+                                    <ColumnDefinition Width="200"/>   <!-- Replacement -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- Regex Toggle -->
+                                    <ColumnDefinition Width="*"/>      <!-- Spacer -->
                                     <ColumnDefinition Width="Auto"/> <!-- Delete -->
                                 </Grid.ColumnDefinitions>
                                 
                                 <ToggleSwitch Grid.Column="0" IsOn="{Binding IsEnabled, Mode=TwoWay}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,12,0"/>
                                 
-                                <Button Grid.Column="1" Click="Preview_Click" Style="{StaticResource SubtleButtonStyle}" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <SymbolIcon Symbol="Play"/>
-                                </Button>
+                                <TextBox Grid.Column="1" Text="{Binding Word, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Word to match..." VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 
-                                <TextBox Grid.Column="2" Text="{Binding TagName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Tag Name" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBox Grid.Column="2" Text="{Binding Replacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Pronounce as..." VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 
-                                <TextBlock Grid.Column="3" Text="{Binding FileName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                <CheckBox Grid.Column="3" Content="Regex" IsChecked="{Binding IsRegex, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 
-                                <Button Grid.Column="4" Background="Transparent" Click="Delete_Click" VerticalAlignment="Center" ToolTipService.ToolTip="Delete">
+                                <Button Grid.Column="5" Background="Transparent" Click="Delete_Click" VerticalAlignment="Center" ToolTipService.ToolTip="Delete Rule">
                                     <SymbolIcon Symbol="Delete" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                 </Button>
                             </Grid>
@@ -65,52 +69,43 @@
             </ListView>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,20,0,0">
-                <Button Click="Import_Click" Style="{StaticResource AccentButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <SymbolIcon Symbol="Audio"/>
-                        <TextBlock Text="Import Audio"/>
-                    </StackPanel>
-                </Button>
-                <Button x:Name="SaveAllButton" Content="Save SFX Settings" Click="Save_Click" Width="150"/>
+                <Button x:Name="SaveAllButton" Content="Save Dictionary Settings" Click="Save_Click" Width="200"/>
             </StackPanel>
         </Grid>
 
         <!-- RIGHT PANE: GUIDE -->
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="15">
-                <TextBlock Text="SFX Guide" FontWeight="Bold" FontSize="20" Margin="0,0,0,10"/>
+                <TextBlock Text="Dictionary Guide" FontWeight="Bold" FontSize="20" Margin="0,0,0,10"/>
 
                 <Expander Header="How it works" IsExpanded="True" HorizontalAlignment="Stretch">
                     <StackPanel Spacing="10" Padding="4">
-                        <TextBlock Text="Sound Effects allow you to trigger audio files directly from Twitch chat using custom tags." 
+                        <TextBlock Text="The Pronunciation Dictionary lets you tell the TTS engine how to pronounce specific words or abbreviations." 
                                    TextWrapping="Wrap" FontSize="13"/>
-                        <TextBlock Text="When a message contains your tag, the app pauses speech, plays the sound, and then continues speaking." 
+                        <TextBlock Text="If a user types an abbreviation like 'idk', you can map it to 'I don't know' so it sounds natural." 
                                    TextWrapping="Wrap" FontSize="13" FontStyle="Italic" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Expander>
 
-                <Expander Header="Usage Format" IsExpanded="True" HorizontalAlignment="Stretch">
+                <Expander Header="Standard Matching" IsExpanded="True" HorizontalAlignment="Stretch">
                     <StackPanel Spacing="12" Padding="4">
-                        <TextBlock Text="THE TAG" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="[tagname]" FontWeight="Bold" FontSize="18" Foreground="MediumPurple"/>
-                            <TextBlock Text="Wrap your Tag Name in brackets." FontSize="13"/>
-                        </StackPanel>
-
+                        <TextBlock Text="By default, words are matched strictly as whole words (case-insensitive)." FontSize="13" TextWrapping="Wrap"/>
+                        
                         <TextBlock Text="EXAMPLE" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,10,0,0"/>
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10" CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                            <TextBlock Text="&quot;Hello! [wow] That was an amazing play!&quot;" TextWrapping="Wrap" FontSize="12" FontStyle="Italic"/>
+                            <TextBlock Text="Word: idk&#x0a;Replacement: I don't know" TextWrapping="Wrap" FontSize="12" FontStyle="Italic"/>
                         </Border>
-                        <TextBlock Text="If you have a sound with the tag 'wow', it will play at that exact moment." TextWrapping="Wrap" FontSize="12"/>
+                        <TextBlock Text="This matches 'idk' but ignores 'midknight'." TextWrapping="Wrap" FontSize="12"/>
                     </StackPanel>
                 </Expander>
 
-                <Expander Header="Important Tips" HorizontalAlignment="Stretch">
-                    <StackPanel Spacing="8" Padding="4">
-                        <TextBlock Text="• Supported formats: .mp3 and .wav" FontSize="13"/>
-                        <TextBlock Text="• Files are copied to your AppData folder safely." FontSize="13"/>
-                        <TextBlock Text="• Tags are not case-sensitive." FontSize="13"/>
-                        <TextBlock Text="• Volume follows the Global Volume slider." FontSize="13"/>
+                <Expander Header="Regex Matching" HorizontalAlignment="Stretch">
+                    <StackPanel Spacing="12" Padding="4">
+                        <TextBlock Text="Check the 'Regex' box to use Regular Expressions for advanced matching." FontSize="13" TextWrapping="Wrap"/>
+                        <TextBlock Text="EXAMPLE" FontSize="14" FontWeight="Black" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10" CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                            <TextBlock Text="Word: L+([oO]+)L&#x0a;Replacement: laugh out loud" TextWrapping="Wrap" FontSize="12" FontStyle="Italic"/>
+                        </Border>
                     </StackPanel>
                 </Expander>
             </StackPanel>

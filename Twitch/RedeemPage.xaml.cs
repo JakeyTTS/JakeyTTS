@@ -15,6 +15,7 @@ namespace JakeyTTS
         public TwitchService ViewModel => TwitchService.Instance;
         public ObservableCollection<RedeemItem> RedeemList { get; set; }
         public ObservableCollection<TriggerOption> AvailableTriggers { get; } = new();
+        public CommandCondition[] Conditions { get; } = (CommandCondition[])Enum.GetValues(typeof(CommandCondition));
 
         public RedeemPage()
         {
@@ -45,8 +46,7 @@ namespace JakeyTTS
                 }
             }
 
-            // Corregido el nombre de la tabla
-            RedeemsTable.ItemsSource = RedeemList;
+            // Fixed name of the table mapping by removing RedeemsTable reference
         }
 
         private async void Sync_Click(object sender, RoutedEventArgs e)
@@ -70,6 +70,65 @@ namespace JakeyTTS
             ViewModel.Config.Redeems = RedeemList.ToList();
             ViewModel.Config.Save();
             MainWindow.Instance?.Log("💾 Rewards saved.");
+        }
+
+        private async void ManageVariables_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new VariableManagerDialog();
+            dialog.XamlRoot = this.XamlRoot;
+            await dialog.ShowAsync();
+            foreach (var r in RedeemList) foreach (var a in r.Actions) a.VariableScope = a.VariableScope;
+        }
+
+        private async void LocalVariables_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is RedeemItem cmd)
+            {
+                var dialog = new VariableManagerDialog(cmd.LocalVariables);
+                dialog.XamlRoot = this.XamlRoot;
+                await dialog.ShowAsync();
+                foreach (var a in cmd.Actions) a.VariableScope = a.VariableScope;
+                Save_Click(null, null); // Save after dialog closes
+            }
+        }
+
+        private void UpgradeRedeem_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is RedeemItem cmd)
+            {
+                cmd.UpgradeToBlocks();
+                Save_Click(null, null);
+            }
+        }
+
+        private void AddAction_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is RedeemItem cmd)
+            {
+                cmd.Actions.Add(new CommandAction { ParentItem = cmd });
+                Save_Click(null, null);
+            }
+        }
+
+        private void DeleteAction_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            var btn = sender as Microsoft.UI.Xaml.Controls.Button;
+            if (btn?.DataContext is CommandAction action)
+            {
+                // Find parent command
+                var cmd = RedeemList.FirstOrDefault(c => c.Actions.Contains(action));
+                if (cmd != null)
+                {
+                    cmd.Actions.Remove(action);
+                    Save_Click(null, null);
+                }
+            }
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            Save_Click(null, null);
+            base.OnNavigatedFrom(e);
         }
     }
 }

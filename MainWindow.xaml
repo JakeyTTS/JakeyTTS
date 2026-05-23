@@ -62,6 +62,11 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem Content="Mixed Voices" Tag="MixedVoices" Icon="Volume"/>
+                <NavigationViewItem Content="Dictionary" Tag="Dictionary">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8FD;"/> <!-- Dictionary Icon -->
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItemSeparator/>
 
