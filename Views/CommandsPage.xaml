@@ -39,6 +39,13 @@
 
             <ListView Grid.Row="1" x:Name="CommandsListView" ItemsSource="{x:Bind CommandList, Mode=OneWay}" SelectionMode="Single"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <ListView.Resources>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
+                </ListView.Resources>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="models:CommandItem">
                         <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,12">
@@ -242,16 +249,10 @@
             </ListView>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="16" Margin="0,24,0,0" HorizontalAlignment="Right">
-                <Button Click="Delete_Click" Background="Transparent" Foreground="{ThemeResource SystemFillColorCriticalBrush}" BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" BorderThickness="1">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <SymbolIcon Symbol="Delete"/>
-                        <TextBlock Text="Delete Selected"/>
-                    </StackPanel>
-                </Button>
-                <Button Click="Add_Click">
+                <Button Click="Add_Click" Style="{StaticResource AccentButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <SymbolIcon Symbol="Add"/>
-                        <TextBlock Text="New Command"/>
+                        <TextBlock Text="Add Command"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="SaveAllButton" Content="Save All" Click="Save_Click" Style="{StaticResource AccentButtonStyle}" Width="150"/>

@@ -253,7 +253,7 @@ namespace JakeyTTS
                 else if (action.Condition == CommandCondition.IfVariableMatch)
                 {
                     string varValue = GetVariableValue(action.ConditionScope, action.ConditionVariable, cmd);
-                    string compareValue = ProcessScript(action.ConditionValue, sender, fullMessage, trigger, cmd);
+                    string compareValue = ProcessScript(action.ConditionValue, sender, fullMessage, trigger, cmd, cmd is RedeemItem ri ? ri.Name : null);
                     
                     if (action.ConditionOperator == "==") conditionMet = (varValue == compareValue);
                     else if (action.ConditionOperator == "!=") conditionMet = (varValue != compareValue);
@@ -285,10 +285,10 @@ namespace JakeyTTS
                 // EXECUTE ACTIONS FOR THIS BLOCK
                 if (action.UpdateVariable && action.UpdateVariableFirst && !string.IsNullOrWhiteSpace(action.TargetVariable))
                 {
-                    UpdateVariable(action.VariableScope, action.TargetVariable, action.VariableOperator, ProcessScript(action.VariableValue, sender, fullMessage, trigger, cmd), cmd);
+                    UpdateVariable(action.VariableScope, action.TargetVariable, action.VariableOperator, ProcessScript(action.VariableValue, sender, fullMessage, trigger, cmd, cmd is RedeemItem ri2 ? ri2.Name : null), cmd);
                 }
 
-                string processedResponse = ProcessScript(action.Response, sender, fullMessage, trigger, cmd);
+                string processedResponse = ProcessScript(action.Response, sender, fullMessage, trigger, cmd, cmd is RedeemItem ri3 ? ri3.Name : null);
                 
                 if (action.ShouldReplyInChat && !string.IsNullOrWhiteSpace(processedResponse))
                 {
@@ -308,7 +308,7 @@ namespace JakeyTTS
 
                 if (action.UpdateVariable && !action.UpdateVariableFirst && !string.IsNullOrWhiteSpace(action.TargetVariable))
                 {
-                    UpdateVariable(action.VariableScope, action.TargetVariable, action.VariableOperator, ProcessScript(action.VariableValue, sender, fullMessage, trigger, cmd), cmd);
+                    UpdateVariable(action.VariableScope, action.TargetVariable, action.VariableOperator, ProcessScript(action.VariableValue, sender, fullMessage, trigger, cmd, cmd is RedeemItem ri4 ? ri4.Name : null), cmd);
                 }
 
                 if (action.WaitMs > 0)
@@ -414,12 +414,23 @@ namespace JakeyTTS
                 {
                     PluginServer.Instance.NotifyTriggerEvent("redeem", redeemConfig.Name, redeemConfig.WebsocketParam, ev.UserName, ev.UserInput ?? "", redeemConfig.TriggerPlugin);
                 }
-                string msg = ev.UserInput ?? "";
-                if (!string.IsNullOrWhiteSpace(msg) || !string.IsNullOrWhiteSpace(redeemConfig.FixedText))
+                string userInput = ev.UserInput ?? "";
+                if (!string.IsNullOrWhiteSpace(userInput) || !string.IsNullOrWhiteSpace(redeemConfig.FixedText))
                 {
-                    // For legacy redeems, use FixedText if available, otherwise just use the msg
-                    string scriptToProcess = string.IsNullOrWhiteSpace(redeemConfig.FixedText) ? msg : redeemConfig.FixedText;
-                    msg = ProcessScript(scriptToProcess, ev.UserName, msg, "");
+                    // For legacy redeems, use FixedText if available, otherwise just use the userInput
+                    string scriptToProcess = string.IsNullOrWhiteSpace(redeemConfig.FixedText) ? userInput : redeemConfig.FixedText;
+
+                    string msg = ProcessScript(scriptToProcess, ev.UserName, userInput, "", null, redeemConfig.Name);
+                    
+                    if (redeemConfig.ReadUserMessage && !string.IsNullOrWhiteSpace(userInput))
+                    {
+                        // Append user message if it wasn't already referenced via {message}
+                        if (!string.IsNullOrWhiteSpace(redeemConfig.FixedText) && !redeemConfig.FixedText.Contains("{message}", StringComparison.OrdinalIgnoreCase))
+                        {
+                            msg = msg + " " + userInput;
+                        }
+                    }
+
                     AddToHistory(ev.UserName, msg, "Reward");
                     await TtsEngine.Instance.ProcessAndSpeak(msg, "hidden");
                 }
@@ -430,7 +441,7 @@ namespace JakeyTTS
         /// FIXED: Intercepts all text templates before writing out onto chat payloads, 
         /// recursively swapping out active plugin variables matching the {} layout configuration model rules.
         /// </summary>
-        public string ProcessScript(string script, string sender, string fullMessage, string trigger = "", IActionableItem? cmd = null)
+        public string ProcessScript(string script, string sender, string fullMessage, string trigger = "", IActionableItem? cmd = null, string? targetOverride = null)
         {
             if (string.IsNullOrEmpty(script)) return fullMessage;
 
@@ -445,7 +456,13 @@ namespace JakeyTTS
                 res = res.Replace("{user}", sender, StringComparison.OrdinalIgnoreCase);
             }
             
-            if (args.Length > 0)
+            res = res.Replace("{message}", fullMessage ?? "", StringComparison.OrdinalIgnoreCase);
+
+            if (targetOverride != null)
+            {
+                res = res.Replace("{target}", targetOverride, StringComparison.OrdinalIgnoreCase);
+            }
+            else if (args.Length > 0)
             {
                 res = res.Replace("{target}", string.Join(" ", args), StringComparison.OrdinalIgnoreCase);
             }

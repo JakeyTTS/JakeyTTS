@@ -86,14 +86,6 @@ namespace JakeyTTS.Views
             Save_Click(null, null);
         }
 
-        private void Delete_Click(object sender, RoutedEventArgs e)
-        {
-            if (CommandsListView.SelectedItem is CommandItem selected)
-            {
-                CommandList.Remove(selected);
-                Save_Click(null, null);
-            }
-        }
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {

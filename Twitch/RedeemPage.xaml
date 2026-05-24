@@ -6,7 +6,16 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:JakeyTTS.Core"
+    xmlns:conv="using:JakeyTTS.Core.Converters"
+    xmlns:views="using:JakeyTTS.Views"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <conv:NullToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:EnumToVisConverter x:Key="EnumToVisConverter"/>
+        <conv:PluginToVisConverter x:Key="PluginToVisConverter"/>
+        <views:EnumToStringConverter x:Key="EnumToStringConverter"/>
+    </Page.Resources>
 
     <Grid Margin="40">
         <Grid.ColumnDefinitions>
@@ -39,6 +48,13 @@
 
             <ListView Grid.Row="1" x:Name="RedeemsListView" ItemsSource="{x:Bind RedeemList, Mode=OneWay}" SelectionMode="Single"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <ListView.Resources>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
+                </ListView.Resources>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="models:RedeemItem">
                         <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,12">
@@ -80,6 +96,7 @@
                                             <StackPanel Orientation="Horizontal" Spacing="24">
                                                 <CheckBox Content="Reply in Chat" IsChecked="{Binding ShouldReplyInChat, Mode=TwoWay}"/>
                                                 <CheckBox Content="Reply as Bot" IsChecked="{Binding ReplyAsBot, Mode=TwoWay}"/>
+                                                <CheckBox Content="Read Viewer Message" IsChecked="{Binding ReadUserMessage, Mode=TwoWay}" ToolTipService.ToolTip="Automatically append the viewer's text to the speech output if not explicitly placed via {message}"/>
                                             </StackPanel>
                                             
                                             <StackPanel Orientation="Horizontal" Spacing="16">
@@ -246,7 +263,12 @@
 
                         <StackPanel Spacing="4">
                             <TextBlock Text="{}{user} / {target}" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                            <TextBlock Text="Sender and first word." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="Sender and the Redeem name." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{}{message}" FontWeight="Bold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Text="The viewer's typed message." FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         </StackPanel>
 
                         <StackPanel Spacing="4">

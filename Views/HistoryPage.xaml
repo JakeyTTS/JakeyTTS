@@ -20,7 +20,7 @@
 
         <ListView x:Name="HistoryListView" 
           Grid.Row="1"
-          ItemsSource="{Binding History}"
+          ItemsSource="{x:Bind History, Mode=OneWay}"
           SelectionMode="None">
 
             <ListView.HeaderTemplate>

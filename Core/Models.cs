@@ -324,6 +324,13 @@ namespace JakeyTTS.Core
         public bool ShouldReplyInChat { get; set; } = false;
         public bool ReplyAsBot { get; set; } = false;
 
+        private bool _readUserMessage = true;
+        public bool ReadUserMessage
+        {
+            get => _readUserMessage;
+            set { if (_readUserMessage == value) return; _readUserMessage = value; OnPropertyChanged(); }
+        }
+
         private bool _sendWebsocket = false;
         public bool SendWebsocket
         {

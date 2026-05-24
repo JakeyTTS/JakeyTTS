@@ -29,8 +29,15 @@
                 <TextBox Grid.Column="1" x:Name="SearchBox" PlaceholderText="Search tag or file..." TextChanged="SearchBox_TextChanged" VerticalAlignment="Center"/>
             </Grid>
 
-            <ListView Grid.Row="1" x:Name="SfxListView" ItemsSource="{x:Bind FilteredSfxList, Mode=OneWay}" 
-                      SelectionMode="None" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <ListView Grid.Row="1" x:Name="SoundEffectsListView" ItemsSource="{x:Bind FilteredSfxList, Mode=OneWay}" SelectionMode="Single"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <ListView.Resources>
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
+                </ListView.Resources>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="models:SoundEffectItem">
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"

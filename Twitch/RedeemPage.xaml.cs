@@ -56,13 +56,23 @@ namespace JakeyTTS
 
             if (remoteRewards == null) return;
 
-            foreach (var rw in remoteRewards)
-            {
-                if (!RedeemList.Any(r => r.Id == rw.Id))
+            this.DispatcherQueue.TryEnqueue(() => {
+                try
                 {
-                    RedeemList.Add(rw);
+                    foreach (var rw in remoteRewards)
+                    {
+                        if (!RedeemList.Any(r => r.Id == rw.Id))
+                        {
+                            var newItem = new RedeemItem { Id = rw.Id, Name = rw.Name, IsEnabled = rw.IsEnabled };
+                            RedeemList.Add(newItem);
+                        }
+                    }
                 }
-            }
+                catch (Exception ex)
+                {
+                    MainWindow.Instance?.Log($"❌ Error syncing rewards: {ex.Message}");
+                }
+            });
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
