@@ -68,28 +68,25 @@ namespace JakeyTTS
             }
         }
 
-        // FIXED: Cambiado de 'async Task' a 'async void' para que sea compatible con el evento Click de WinUI
+        // FIXED: changed the method name from 'PreviewMelody_Click' to 'Preview_Click' to match the event handler in XAML
         private async void Preview_Click(object sender, RoutedEventArgs e)
         {
             if (_points == null || !_points.Any()) return;
 
-            // Sincronizamos temporalmente los puntos actuales del editor con el objeto de la melodía
-            // para que el motor de audio use el estado visual actual.
+            // If the user has added/removed points but hasn't saved yet, we want to preview with the current state of the editor,
+            // not the last saved state in _melody.Points. So we take the current _points collection, order it, and assign it to _melody.Points for the preview.
+            // After the preview, we restore the original _melody.Points to avoid side effects if the user cancels.
             var currentPoints = _points.OrderBy(p => p.TimePct).ToList();
 
-            // Guardamos los puntos originales para no ensuciar la data si el usuario cancela
             var originalPoints = _melody.Points;
             _melody.Points = currentPoints;
 
-            // Usamos el nombre del TextBox por si el usuario lo cambió
             string previewName = string.IsNullOrWhiteSpace(NameInput.Text) ? "preview" : NameInput.Text;
             string originalName = _melody.Name;
             _melody.Name = previewName;
 
-            // Ejecutamos el test apuntando de forma segura a TtsEngine
             await TtsEngine.Instance.ProcessAndSpeak($"[melody:{previewName}] This is a preview of your new melody sound.", "test");
 
-            // Restauramos los valores originales (el guardado real solo ocurre en Save_Click)
             _melody.Points = originalPoints;
             _melody.Name = originalName;
         }

@@ -65,6 +65,11 @@ namespace JakeyTTS
 
         public void Stop() => _cts?.Cancel();
 
+        /**
+         * Global variable syntax: {variableName}
+         * If variableName ends with "_show", it will trigger a read notification but return empty string
+         * Otherwise, it will attempt to replace with the current value from PluginServer's GlobalVariables dictionary
+         */
         private string PreProcessGlobalVariables(string rawInput)
         {
             if (string.IsNullOrWhiteSpace(rawInput)) return rawInput;
@@ -113,7 +118,8 @@ namespace JakeyTTS
 
         private KokoroVoice? ResolveVoice(string name)
         {
-            // FIXED: Se inicializa allVoices localmente para resolver la definición del contexto de compilación
+            // FIXED: Voice resolution logic now checks for mixed voice configurations first, allowing users to define custom blends of voices under a single name.
+            // If a mix configuration is found and valid, it will create and return the mixed voice. If not, it falls back to searching for a standard voice match by name.
             var allVoices = KokoroVoiceManager.Voices;
             if (allVoices == null || !allVoices.Any()) return null;
 
@@ -424,6 +430,19 @@ namespace JakeyTTS
             }
         }
 
+        /*  
+         * REVERSE EFFECT (Temporal Phase Inversion)  
+         * -----------------------------------------  
+         * Theory: 16-bit Mono PCM audio consists of a sequence of "samples."   
+         * Each sample occupies 2 bytes (Little-Endian format).  
+         *   
+         * Technical Note: You cannot simply reverse the raw byte array (byte[]). Doing so   
+         * would flip the internal byte order of each 16-bit sample, destroying the amplitude   
+         * data and resulting in digital noise (static).  
+         *   
+         * Implementation: We iterate through the data in 2-byte blocks. We move block 'i'   
+         * to position (Total - 1 - i), ensuring each individual sample's integrity is preserved.  
+         */
         private byte[] ReverseAudio(byte[] data)
         {
             if (data == null || data.Length < 2) return data;
@@ -437,6 +456,19 @@ namespace JakeyTTS
             return reversed;
         }
 
+        /*  
+         * ROBOT EFFECT (Ring Modulation)  
+         * ------------------------------  
+         * Theory: Multiply the audio signal (carrier) by a low-frequency sine wave   
+         * (modulator, typically between 30Hz and 60Hz).  
+         * https://en.wikipedia.org/wiki/Ring_modulation  
+         * Technical Note: In the frequency domain, this creates "sidebands" (the sum and   
+         * difference of the carrier and modulator frequencies). This results in a non-harmonic,   
+         * metallic timbre that "dehumanizes" the voice by shifting its natural formants.  
+         *   
+         * Implementation: Bytes are converted to 16-bit integers (shorts), multiplied by   
+         * a Sin() value relative to the sample's timestamp, and converted back to bytes.  
+         */
         private byte[] ApplyRobotEffect(byte[] data)
         {
             if (data == null || data.Length < 2) return data;
@@ -454,6 +486,20 @@ namespace JakeyTTS
             return processed;
         }
 
+        /*  
+         * ECHO EFFECT (Feedback Delay Line)  
+         * ---------------------------------  
+         * Theory: Echo is produced by adding a version of the signal that occurred in the   
+         * past (delay) to the current signal, attenuated by a gain factor (decay).  
+         * https://music.arts.lucid-bardeen/delay-effect-feedback  
+         *   
+         * Technical Note:   
+         * 1. Buffer Expansion: The resulting audio must be longer than the original   
+         *    to accommodate the "echo tail" after the speech ends.  
+         * 2. Mixing: We sum the original sample with the delayed sample.  
+         * 3. Clamping: Summing two signals can exceed 16-bit limits (-32768 to 32767).   
+         *    We use Math.Clamp to prevent digital clipping (distortion).  
+         */
         private byte[] ApplyEchoEffect(byte[] data, int delayMs)
         {
             if (data == null || data.Length < 2 || delayMs <= 0) return data;
@@ -472,6 +518,17 @@ namespace JakeyTTS
             return processed;
         }
 
+        /*
+         * PITCH SHIFT (Resampling with Linear Interpolation)  
+         * --------------------------------------------------  
+         * Theory: To change the pitch without affecting duration, we can resample the audio data.  
+         * A pitch multiplier > 1.0 raises the pitch (fewer samples), while < 1.0 lowers it (more samples).  
+         * https://en.wikipedia.org/wiki/Pitch_shifting#Resampling  
+         *   
+         * Technical Note:   
+         * 1. Output Length: The output sample count is input sample count divided by the pitch multiplier.  
+         * 2. Linear Interpolation: For non-integer source positions, we interpolate between the two nearest samples to create a smoother result.  
+         */
         private byte[] ResamplePcmSimple(byte[] data, float pitchMultiplier)
         {
             if (data == null || data.Length < 2 || Math.Abs(pitchMultiplier - 1.0f) < 0.01f) return data;
@@ -498,6 +555,15 @@ namespace JakeyTTS
             return outputBytes;
         }
 
+        /*
+         * WAV HEADER CREATION  
+         * -------------------  
+         * Theory: A WAV file consists of a 44-byte header followed by raw PCM data.  
+         * The header contains metadata about the audio format, sample rate, bit depth, and data length.  
+         * https://en.wikipedia.org/wiki/WAV#File_structure  
+         *   
+         * Technical Note: We construct the header manually to prepend it to our synthesized PCM data, allowing it to be played as a standard WAV file.  
+         */
         private byte[] CreateWavHeader(int pcmDataLength)
         {
             byte[] header = new byte[44];
@@ -549,6 +615,15 @@ namespace JakeyTTS
         }
         #endregion
 
+        /*  
+         * MELODY EFFECT (Dynamic Pitch Modulation)  
+         * -----------------------------------------  
+         * Theory: A melody effect modulates the pitch of the audio over time according to a predefined curve or pattern.  
+         * This can create musical intonations, vibrato, or other expressive effects.  
+         *   
+         * Technical Note: We implement this by creating a custom IWaveProvider that reads from the original PCM data 
+         * and applies a dynamic pitch multiplier based on the current playback position and the specified Melody's curve.  
+         */
         private class MelodyWaveProvider : IWaveProvider
         {
             private readonly byte[] _sourceData; private readonly WaveFormat _format; private readonly Melody _melody; private double _sourcePosition = 0;

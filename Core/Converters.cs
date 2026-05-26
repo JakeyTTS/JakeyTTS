@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using JakeyTTS.Melodies; // Asegúrate de que esto apunte a donde está MelodyPoint
+using JakeyTTS.Melodies;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
@@ -14,7 +14,6 @@ using Windows.Foundation;
 
 namespace JakeyTTS.Core.Converters
 {
-    // Para las Tarjetas de Voces Mezcladas
     public class PointCountConverterVoice : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
@@ -28,7 +27,6 @@ namespace JakeyTTS.Core.Converters
         public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotImplementedException();
     }
 
-    // Para el Porcentaje de los Sliders (0.0 - 1.0 -> 0% - 100%)
     public class PercentConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
@@ -43,7 +41,6 @@ namespace JakeyTTS.Core.Converters
         public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotImplementedException();
     }
 
-    // --- Otros conversores existentes ---
 
     public class PointCountConverter : IValueConverter
     {

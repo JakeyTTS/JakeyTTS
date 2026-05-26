@@ -76,6 +76,10 @@ namespace JakeyTTS
             }
         }
 
+        /* HandleSubscriptionMessage is responsible for processing incoming subscription events, determining the appropriate response based on 
+         * user-configured actions for both cumulative months and streak months, and then generating the final message to be spoken via TTS. 
+         * It also handles the optional reading of the subscriber's custom message, ensuring that any Twitch-specific formatting is cleaned out before being spoken.
+         */
         private async Task HandleSubscriptionMessage(object? s, ChannelSubscriptionMessageArgs e)
         {
             var ev = e.Payload.Event;
@@ -111,6 +115,8 @@ namespace JakeyTTS
             }
         }
 
+        /* HandleGoalProgress listens for updates on channel goals and checks if any configured user actions should be triggered when a goal is completed.
+         */
         private async Task HandleGoalProgress(object? s, ChannelGoalProgressArgs e)
         {
             var ev = e.Payload.Event;
@@ -136,6 +142,14 @@ namespace JakeyTTS
         #endregion
 
         #region Twitch Connectivity
+
+        /*
+         * Connect is responsible for establishing a WebSocket connection to Twitch's EventSub service, 
+         * subscribing to relevant events based on the user's configuration, and setting up event handlers to process 
+         * incoming Twitch events such as chat messages, reward redemptions, cheers, subscriptions, and goal progress updates. 
+         * It also ensures that the UI is updated to reflect the connection status and that any necessary cleanup is performed 
+         * if a previous connection exists.
+         */
         public async Task Connect()
         {
             if (string.IsNullOrEmpty(Config.Token)) return;
@@ -174,6 +188,9 @@ namespace JakeyTTS
             }
         }
 
+        /* HandleChatMessage processes incoming chat messages, checks if they match any configured command triggers, verifies user permissions based on badges, and executes the corresponding command actions or responses. 
+         * It also handles the optional reading of chat messages via TTS if enabled in the configuration.
+         */
         private async Task HandleChatMessage(object? s, ChannelChatMessageArgs e)
         {
             var ev = e.Payload.Event;
@@ -236,6 +253,12 @@ namespace JakeyTTS
             }
         }
 
+
+        /* ExecuteActionBlocks iterates through the defined action blocks for a command, evaluates their conditions, 
+         * and executes the corresponding actions such as updating variables, sending chat replies, speaking responses via TTS, and triggering plugins. 
+         * It supports various condition types including message presence, variable comparisons, list emptiness, and random chance, 
+         * allowing for complex command behaviors based on user input and dynamic variables.
+         */
         private async Task ExecuteActionBlocks(IActionableItem cmd, string trigger, string sender, string fullMessage)
         {
             foreach (var action in cmd.Actions)
@@ -380,6 +403,11 @@ namespace JakeyTTS
             Config.Save();
         }
 
+        /*
+         * HandleRewardRedemption processes incoming channel point reward redemption events, 
+         * checks if the redeemed reward matches any configured redeems, and executes the corresponding 
+         * actions such as generating random variables, executing action blocks, triggering plugins, and speaking responses via TTS.
+         * */
         private async Task HandleRewardRedemption(object? sender, ChannelPointsCustomRewardRedemptionArgs e)
         {
             var ev = e.Payload.Event;

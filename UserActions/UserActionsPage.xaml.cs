@@ -10,7 +10,7 @@ namespace JakeyTTS.UserActions
 {
     public sealed partial class UserActionsPage : Page
     {
-        // TwitchService mantiene las colecciones de datos de la configuración de Twitch
+        // TwitchService keeps data collection and configuration logic centralized, so we can bind directly to it for simplicity
         private readonly TwitchService _service = TwitchService.Instance;
 
         public UserActionsPage()
@@ -19,7 +19,7 @@ namespace JakeyTTS.UserActions
             this.DataContext = _service;
 
             CategorySelector.SelectionChanged += CategorySelector_SelectionChanged;
-            UpdateSubPageVisibility("Bits"); // Cargar subpágina inicial por defecto
+            UpdateSubPageVisibility("Bits"); // load subpage visibility on initial load
         }
 
         private void CategorySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -32,15 +32,15 @@ namespace JakeyTTS.UserActions
 
         private void UpdateSubPageVisibility(string activeTag)
         {
-            if (BitsSubPage == null) return; // Validación preventiva del ciclo de vida visual de WinUI
+            if (BitsSubPage == null) return; // safety check to avoid null refs during initialization
 
-            // Alternar visibilidades de subpáginas contextuales
+            // Alternate visibilities of subpages
             BitsSubPage.Visibility = activeTag == "Bits" ? Visibility.Visible : Visibility.Collapsed;
             SubsSubPage.Visibility = activeTag == "Subs" ? Visibility.Visible : Visibility.Collapsed;
             StreaksSubPage.Visibility = activeTag == "Streaks" ? Visibility.Visible : Visibility.Collapsed;
             GoalsSubPage.Visibility = activeTag == "Goals" ? Visibility.Visible : Visibility.Collapsed;
 
-            // Alternar visibilidades de guías laterales de parámetros
+            // Also toggle the guide blocks on the right side
             GuideBitsBlock.Visibility = activeTag == "Bits" ? Visibility.Visible : Visibility.Collapsed;
             GuideSubsBlock.Visibility = activeTag == "Subs" ? Visibility.Visible : Visibility.Collapsed;
             GuideStreaksBlock.Visibility = activeTag == "Streaks" ? Visibility.Visible : Visibility.Collapsed;
@@ -53,7 +53,8 @@ namespace JakeyTTS.UserActions
 
             string testUser = "JakeyViewer";
 
-            // FIXED: Todas las llamadas redirigidas de forma segura a TtsEngine.Instance
+            // FIXED: All calls to TtsEngine should now be awaited to ensure proper async handling and avoid potential issues with overlapping speech or unhandled exceptions.
+            // This also allows the UI to remain responsive during the test playback.
             if (tag == "Bits")
             {
                 var action = _service.Config.UserActions.BitActions.FirstOrDefault(a => a.IsEnabled);

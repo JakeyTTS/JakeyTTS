@@ -24,7 +24,6 @@ namespace JakeyTTS.Views
             {
                 MainWindow.Instance?.Log($"🔄 Replaying message from {entry.User}...");
 
-                // FIXED: Redirigido a TtsEngine
                 await TtsEngine.Instance.ProcessAndSpeak(entry.Message);
             }
         }
