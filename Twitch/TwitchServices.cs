@@ -459,6 +459,11 @@ namespace JakeyTTS
                         }
                     }
 
+                    if (redeemConfig.ShouldReplyInChat)
+                    {
+                        await SendChatReply(msg, redeemConfig.ReplyAsBot);
+                    }
+
                     AddToHistory(ev.UserName, msg, "Reward");
                     await TtsEngine.Instance.ProcessAndSpeak(msg, "hidden");
                 }
