@@ -181,6 +181,7 @@ namespace JakeyTTS
                 };
                 Client.ErrorOccurred += (s, e) => {
                     LogUI($"⚠️ Twitch websocket error: {e.Exception?.Message}");
+                    return Task.CompletedTask;
                 };
                 Client.ChannelChatMessage += HandleChatMessage;
                 Client.ChannelPointsCustomRewardRedemptionAdd += HandleRewardRedemption;
