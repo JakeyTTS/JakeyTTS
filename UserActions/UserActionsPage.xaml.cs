@@ -97,7 +97,7 @@ namespace JakeyTTS.UserActions
 
         private void AddBitAction_Click(object sender, RoutedEventArgs e)
         {
-            _service.Config.UserActions.BitActions.Add(new UserActionItem { Threshold = 100.0, Response = "{user} cheered {bits} bits!", IsEnabled = true, ShouldPlayUserMessage = true });
+            _service.Config.UserActions.BitActions.Add(new UserActionItem { Threshold = 100.0, Response = "{user} cheered {bits} bits! {message}", IsEnabled = true, ShouldPlayUserMessage = false });
         }
 
         private void DeleteBitAction_Click(object sender, RoutedEventArgs e)
@@ -107,7 +107,7 @@ namespace JakeyTTS.UserActions
 
         private void AddSubAction_Click(object sender, RoutedEventArgs e)
         {
-            _service.Config.UserActions.SubActions.Add(new UserActionItem { Threshold = 1.0, Response = "{user} subscribed for {months} months!", IsEnabled = true, ShouldPlayUserMessage = true });
+            _service.Config.UserActions.SubActions.Add(new UserActionItem { Threshold = 1.0, Response = "{user} subscribed for {months} months! {message}", IsEnabled = true, ShouldPlayUserMessage = false });
         }
 
         private void DeleteSubAction_Click(object sender, RoutedEventArgs e)
@@ -117,7 +117,7 @@ namespace JakeyTTS.UserActions
 
         private void AddStreakAction_Click(object sender, RoutedEventArgs e)
         {
-            _service.Config.UserActions.StreakActions.Add(new UserActionItem { Threshold = 2.0, Response = "Wow! {user} is on a {streak} month streak!", IsEnabled = true, ShouldPlayUserMessage = true });
+            _service.Config.UserActions.StreakActions.Add(new UserActionItem { Threshold = 2.0, Response = "Wow! {user} is on a {streak} month streak! {message}", IsEnabled = true, ShouldPlayUserMessage = false });
         }
 
         private void DeleteStreakAction_Click(object sender, RoutedEventArgs e)

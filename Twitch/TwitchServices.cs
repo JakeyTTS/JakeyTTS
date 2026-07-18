@@ -166,6 +166,22 @@ namespace JakeyTTS
                     LogUI("🚀 Twitch connected.");
                     ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
                 };
+                Client.WebsocketDisconnected += async (s, e) => {
+                    LogUI("⚠️ Twitch connection lost. Attempting to reconnect...");
+                    await Task.Delay(3000);
+                    try { if (Client != null) await Client.ReconnectAsync(); } catch { }
+                };
+                Client.WebsocketReconnected += async (s, e) => {
+                    LogUI("🔁 Twitch reconnected. Re-subscribing to events...");
+                    await Subscribe("channel.chat.message", Client.SessionId);
+                    await Subscribe("channel.channel_points_custom_reward_redemption.add", Client.SessionId);
+                    await Subscribe("channel.cheer", Client.SessionId);
+                    await Subscribe("channel.subscription.message", Client.SessionId);
+                    await Subscribe("channel.goal.progress", Client.SessionId);
+                };
+                Client.ErrorOccurred += (s, e) => {
+                    LogUI($"⚠️ Twitch websocket error: {e.Exception?.Message}");
+                };
                 Client.ChannelChatMessage += HandleChatMessage;
                 Client.ChannelPointsCustomRewardRedemptionAdd += HandleRewardRedemption;
                 Client.ChannelCheer += HandleCheer;

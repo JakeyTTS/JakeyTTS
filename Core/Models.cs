@@ -554,9 +554,18 @@ namespace JakeyTTS.Core
 
     public class UserActionsConfig : BaseNotify
     {
-        public ObservableCollection<UserActionItem> BitActions { get; set; } = new();
-        public ObservableCollection<UserActionItem> SubActions { get; set; } = new();
-        public ObservableCollection<UserActionItem> StreakActions { get; set; } = new();
+        public ObservableCollection<UserActionItem> BitActions { get; set; } = new()
+        {
+            new UserActionItem { Threshold = 100.0, Response = "{user} cheered {bits} bits! {message}", IsEnabled = true, ShouldPlayUserMessage = false }
+        };
+        public ObservableCollection<UserActionItem> SubActions { get; set; } = new()
+        {
+            new UserActionItem { Threshold = 1.0, Response = "{user} subscribed for {months} months! {message}", IsEnabled = true, ShouldPlayUserMessage = false }
+        };
+        public ObservableCollection<UserActionItem> StreakActions { get; set; } = new()
+        {
+            new UserActionItem { Threshold = 2.0, Response = "Wow! {user} is on a {streak} month streak! {message}", IsEnabled = true, ShouldPlayUserMessage = false }
+        };
 
         private string _subGoalReachedResponse = "Goal reached! {goal_title}";
         public string SubGoalReachedResponse { get => _subGoalReachedResponse; set { _subGoalReachedResponse = value; OnPropertyChanged(); } }

@@ -82,7 +82,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <NumberBox Header="Min Bits" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
-                                            <TextBox Grid.Column="1" Header="{}{Response (Use {user}, {bits})}" Text="{Binding Response, Mode=TwoWay}"/>
+                                            <TextBox Grid.Column="1" Header="{}{Response (Use {user}, {bits}, {message})}" Text="{Binding Response, Mode=TwoWay}"/>
                                             <CheckBox Grid.Column="2" Content="Read Alert" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
                                             <Button Grid.Column="3" VerticalAlignment="Bottom" Click="DeleteBitAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
                                                 <SymbolIcon Symbol="Delete" Foreground="Red"/>
@@ -107,7 +107,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <NumberBox Header="Months" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
-                                            <TextBox Grid.Column="1" Header="{}{Response ({user}, {months})}" Text="{Binding Response, Mode=TwoWay}"/>
+                                            <TextBox Grid.Column="1" Header="{}{Response ({user}, {months}, {message})}" Text="{Binding Response, Mode=TwoWay}"/>
                                             <CheckBox Grid.Column="2" Content="Read Msg" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
                                             <Button Grid.Column="3" VerticalAlignment="Bottom" Click="DeleteSubAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
                                                 <SymbolIcon Symbol="Delete" Foreground="Red"/>
@@ -132,7 +132,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <NumberBox Header="Streak" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
-                                            <TextBox Grid.Column="1" Header="{}{Response ({user}, {streak})}" Text="{Binding Response, Mode=TwoWay}"/>
+                                            <TextBox Grid.Column="1" Header="{}{Response ({user}, {streak}, {message})}" Text="{Binding Response, Mode=TwoWay}"/>
                                             <CheckBox Grid.Column="2" Content="Read Msg" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
                                             <Button Grid.Column="3" VerticalAlignment="Bottom" Click="DeleteStreakAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
                                                 <SymbolIcon Symbol="Delete" Foreground="Red"/>
