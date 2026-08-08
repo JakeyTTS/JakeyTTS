@@ -23,6 +23,7 @@ namespace JakeyTTS.Core
         public string DefaultVoice { get; set; } = "af_bella"; // Default voice for TTS
         public bool ReadChatEnabled { get; set; } = true; // Whether to read chat messages aloud
         public bool TestModeActive { get; set; } = false;
+        public int ScopesVersion { get; set; } = 0; // Tracks if user has accepted the updated scopes
         public int SelectedTheme { get; set; } = 0;
         public string SelectedAudioDevice { get; set; } = "Default System Device"; 
         public string SelectedAudioDevice2 { get; set; } = "None"; // Optional
@@ -107,13 +108,27 @@ namespace JakeyTTS.Core
 
         public static AppConfig Load()
         {
-            if (!File.Exists(ConfigPath)) return new AppConfig();
-            try
+            AppConfig config;
+            if (!File.Exists(ConfigPath))
             {
-                string json = File.ReadAllText(ConfigPath);
-                return JsonSerializer.Deserialize(json, JakeyJsonContext.Default.AppConfig) ?? new AppConfig();
+                config = new AppConfig();
             }
-            catch { return new AppConfig(); }
+            else
+            {
+                try
+                {
+                    string json = File.ReadAllText(ConfigPath);
+                    config = JsonSerializer.Deserialize(json, JakeyJsonContext.Default.AppConfig) ?? new AppConfig();
+                }
+                catch { config = new AppConfig(); }
+            }
+
+            // Enforce default properties
+            if (config.UserActions?.SubActions?.Count > 0) config.UserActions.SubActions[0].IsDefault = true;
+            if (config.UserActions?.BitActions?.Count > 0) config.UserActions.BitActions[0].IsDefault = true;
+            if (config.UserActions?.StreakActions?.Count > 0) config.UserActions.StreakActions[0].IsDefault = true;
+
+            return config;
         }
 
         public void Save()

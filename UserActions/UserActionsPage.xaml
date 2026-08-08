@@ -8,10 +8,14 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:conv="using:JakeyTTS.Core.Converters"
+    xmlns:views="using:JakeyTTS.Views"
     mc:Ignorable="d" x:Name="UserActionsRoot">
 
     <Page.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <conv:NullToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:RatioToStarConverter x:Key="RatioToStarConverter"/>
+        <conv:InverseRatioToStarConverter x:Key="InverseRatioToStarConverter"/>
     </Page.Resources>
 
     <Grid Margin="40">
@@ -71,23 +75,50 @@
                     <Grid>
                         <StackPanel Spacing="15" x:Name="BitsSubPage" Visibility="Collapsed">
                             <TextBlock Text="Bits Configuration" FontSize="20" FontWeight="SemiBold"/>
+                            <ToggleSwitch Header="Enable Bits Messages" IsOn="{Binding Config.UserActions.IsBitActionsEnabled, Mode=TwoWay}"/>
                             <ItemsControl ItemsSource="{Binding Config.UserActions.BitActions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:UserActionItem">
-                                        <Grid ColumnSpacing="12" Margin="0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="100"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <NumberBox Header="Min Bits" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
-                                            <TextBox Grid.Column="1" Header="{}{Response (Use {user}, {bits}, {message})}" Text="{Binding Response, Mode=TwoWay}"/>
-                                            <CheckBox Grid.Column="2" Content="Read Alert" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
-                                            <Button Grid.Column="3" VerticalAlignment="Bottom" Click="DeleteBitAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
-                                                <SymbolIcon Symbol="Delete" Foreground="Red"/>
-                                            </Button>
-                                        </Grid>
+                                        <Border BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,6,0,16">
+                                            <StackPanel>
+                                                <Grid ColumnSpacing="12" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <NumberBox Header="Min Bits" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
+                                                    
+                                                    <TextBox Grid.Column="1" Header="Response" PlaceholderText="(Use {user}, {bits}, {message})" Text="{Binding Response, Mode=TwoWay}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                    <CheckBox Grid.Column="2" Content="Read User Message" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
+                                                    
+                                                    <Button Grid.Column="3" Content="Upgrade to Blocks" Click="UpgradeUserAction_Click" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Bottom" Margin="0,0,10,3" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" />
+                                                    
+                                                    <Button Grid.Column="4" VerticalAlignment="Bottom" Click="DeleteBitAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
+                                                        <SymbolIcon Symbol="Delete" Foreground="Red"/>
+                                                    </Button>
+                                                </Grid>
+
+                                                <StackPanel Spacing="10" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="Default Response" FontWeight="SemiBold"/>
+                                                    <TextBox Header="Response" PlaceholderText="(Use {user}, {bits}, {message})" Text="{Binding Response, Mode=TwoWay}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                    <CheckBox Content="Read User Message" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}"/>
+                                                    <Button Content="Upgrade to Blocks" Click="UpgradeUserAction_Click" Style="{StaticResource AccentButtonStyle}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" />
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,12,0,0" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <CheckBox Content="Speak Response (TTS)" IsChecked="{Binding ShouldSpeak, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Play Response AFTER Msg" IsChecked="{Binding PlayResponseAfterMessage, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Chat Reply" IsChecked="{Binding ShouldReplyInChat, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Reply as Bot" IsChecked="{Binding ReplyAsBot, Mode=TwoWay}"/>
+                                                </StackPanel>
+
+                                                <ToggleSwitch Header="Enable Action Blocks (Advanced)" IsOn="{Binding UseActionBlocks, Mode=TwoWay}" Margin="0,12,0,0"/>
+                                                <views:ActionBlocksControl DataContext="{Binding}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}}" Margin="0,10,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -96,23 +127,50 @@
 
                         <StackPanel Spacing="15" x:Name="SubsSubPage" Visibility="Collapsed">
                             <TextBlock Text="Subscriptions Configuration" FontSize="20" FontWeight="SemiBold"/>
+                            <ToggleSwitch Header="Enable Subscription Messages" IsOn="{Binding Config.UserActions.IsSubActionsEnabled, Mode=TwoWay}"/>
                             <ItemsControl ItemsSource="{Binding Config.UserActions.SubActions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:UserActionItem">
-                                        <Grid ColumnSpacing="12" Margin="0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="100"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <NumberBox Header="Months" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
-                                            <TextBox Grid.Column="1" Header="{}{Response ({user}, {months}, {message})}" Text="{Binding Response, Mode=TwoWay}"/>
-                                            <CheckBox Grid.Column="2" Content="Read Msg" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
-                                            <Button Grid.Column="3" VerticalAlignment="Bottom" Click="DeleteSubAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
-                                                <SymbolIcon Symbol="Delete" Foreground="Red"/>
-                                            </Button>
-                                        </Grid>
+                                        <Border BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,6,0,16">
+                                            <StackPanel>
+                                                <Grid ColumnSpacing="12" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <NumberBox Header="Months" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
+                                                    
+                                                    <TextBox Grid.Column="1" Header="Response" PlaceholderText="(Use {user}, {months}, {message})" Text="{Binding Response, Mode=TwoWay}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                    <CheckBox Grid.Column="2" Content="Read User Message" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
+                                                    
+                                                    <Button Grid.Column="3" Content="Upgrade to Blocks" Click="UpgradeUserAction_Click" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Bottom" Margin="0,0,10,3" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" />
+                                                    
+                                                    <Button Grid.Column="4" VerticalAlignment="Bottom" Click="DeleteSubAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
+                                                        <SymbolIcon Symbol="Delete" Foreground="Red"/>
+                                                    </Button>
+                                                </Grid>
+
+                                                <StackPanel Spacing="10" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="Default Response" FontWeight="SemiBold"/>
+                                                    <TextBox Header="Response" PlaceholderText="(Use {user}, {months}, {message})" Text="{Binding Response, Mode=TwoWay}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                    <CheckBox Content="Read User Message" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}"/>
+                                                    <Button Content="Upgrade to Blocks" Click="UpgradeUserAction_Click" Style="{StaticResource AccentButtonStyle}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" />
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,12,0,0" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <CheckBox Content="Speak Response (TTS)" IsChecked="{Binding ShouldSpeak, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Play Response AFTER Msg" IsChecked="{Binding PlayResponseAfterMessage, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Chat Reply" IsChecked="{Binding ShouldReplyInChat, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Reply as Bot" IsChecked="{Binding ReplyAsBot, Mode=TwoWay}"/>
+                                                </StackPanel>
+
+                                                <ToggleSwitch Header="Enable Action Blocks (Advanced)" IsOn="{Binding UseActionBlocks, Mode=TwoWay}" Margin="0,12,0,0"/>
+                                                <views:ActionBlocksControl DataContext="{Binding}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}}" Margin="0,10,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -121,23 +179,50 @@
 
                         <StackPanel Spacing="15" x:Name="StreaksSubPage" Visibility="Collapsed">
                             <TextBlock Text="Resub Streaks Configuration" FontSize="20" FontWeight="SemiBold"/>
+                            <ToggleSwitch Header="Enable Streaks Messages" IsOn="{Binding Config.UserActions.IsStreakActionsEnabled, Mode=TwoWay}"/>
                             <ItemsControl ItemsSource="{Binding Config.UserActions.StreakActions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:UserActionItem">
-                                        <Grid ColumnSpacing="12" Margin="0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="100"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <NumberBox Header="Streak" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
-                                            <TextBox Grid.Column="1" Header="{}{Response ({user}, {streak}, {message})}" Text="{Binding Response, Mode=TwoWay}"/>
-                                            <CheckBox Grid.Column="2" Content="Read Msg" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
-                                            <Button Grid.Column="3" VerticalAlignment="Bottom" Click="DeleteStreakAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
-                                                <SymbolIcon Symbol="Delete" Foreground="Red"/>
-                                            </Button>
-                                        </Grid>
+                                        <Border BorderBrush="{ThemeResource SurfaceStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,6,0,16">
+                                            <StackPanel>
+                                                <Grid ColumnSpacing="12" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <NumberBox Header="Streak" Value="{Binding Threshold, Mode=TwoWay}" SpinButtonPlacementMode="Compact"/>
+                                                    
+                                                    <TextBox Grid.Column="1" Header="Response" PlaceholderText="(Use {user}, {streak}, {message})" Text="{Binding Response, Mode=TwoWay}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                    <CheckBox Grid.Column="2" Content="Read User Message" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
+                                                    
+                                                    <Button Grid.Column="3" Content="Upgrade to Blocks" Click="UpgradeUserAction_Click" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Bottom" Margin="0,0,10,3" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" />
+                                                    
+                                                    <Button Grid.Column="4" VerticalAlignment="Bottom" Click="DeleteStreakAction_Click" Style="{StaticResource DefaultButtonStyle}" Padding="6,6" Margin="0,0,0,3">
+                                                        <SymbolIcon Symbol="Delete" Foreground="Red"/>
+                                                    </Button>
+                                                </Grid>
+
+                                                <StackPanel Spacing="10" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="Default Response" FontWeight="SemiBold"/>
+                                                    <TextBox Header="Response" PlaceholderText="(Use {user}, {streak}, {message})" Text="{Binding Response, Mode=TwoWay}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                    <CheckBox Content="Read User Message" IsChecked="{Binding ShouldPlayUserMessage, Mode=TwoWay}"/>
+                                                    <Button Content="Upgrade to Blocks" Click="UpgradeUserAction_Click" Style="{StaticResource AccentButtonStyle}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}" />
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,12,0,0" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                                    <CheckBox Content="Speak Response (TTS)" IsChecked="{Binding ShouldSpeak, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Play Response AFTER Msg" IsChecked="{Binding PlayResponseAfterMessage, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Chat Reply" IsChecked="{Binding ShouldReplyInChat, Mode=TwoWay}"/>
+                                                    <CheckBox Content="Reply as Bot" IsChecked="{Binding ReplyAsBot, Mode=TwoWay}"/>
+                                                </StackPanel>
+
+                                                <ToggleSwitch Header="Enable Action Blocks (Advanced)" IsOn="{Binding UseActionBlocks, Mode=TwoWay}" Margin="0,12,0,0"/>
+                                                <views:ActionBlocksControl DataContext="{Binding}" Visibility="{Binding UseActionBlocks, Converter={StaticResource BoolToVis}}" Margin="0,10,0,0"/>
+                                            </StackPanel>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -146,10 +231,130 @@
 
                         <StackPanel Spacing="15" x:Name="GoalsSubPage" Visibility="Collapsed">
                             <TextBlock Text="Twitch Creator Goals" FontSize="20" FontWeight="SemiBold"/>
-                            <TextBox Header="{}{Subscription Goals Message (Use {goal_title})}" Text="{Binding Config.UserActions.SubGoalReachedResponse, Mode=TwoWay}" Margin="0,4"/>
-                            <TextBox Header="{}{Follower Goals Message (Use {goal_title})}" Text="{Binding Config.UserActions.FollowerGoalReachedResponse, Mode=TwoWay}" Margin="0,4"/>
-                            <TextBox Header="{}{Bits Goals Message (Use {goal_title})}" Text="{Binding Config.UserActions.BitsGoalReachedResponse, Mode=TwoWay}" Margin="0,4"/>
-                            <TextBox Header="{}{Channel Points Goals Message (Use {goal_title})}" Text="{Binding Config.UserActions.PointsGoalReachedResponse, Mode=TwoWay}" Margin="0,4"/>
+                            
+                            <Expander Header="Subscription Goal" HorizontalAlignment="Stretch" IsExpanded="True">
+                                <StackPanel Spacing="10" Margin="0,10,0,0">
+                                    <Border Background="#18181B" BorderBrush="#2F2F35" BorderThickness="1" CornerRadius="8" Padding="20">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="{Binding CurrentSubGoal.Description, TargetNullValue='Sub Goal Preview'}" FontSize="12" Opacity="0.5" HorizontalAlignment="Center"/>
+                                            <Grid Height="40" CornerRadius="4" Background="#333333">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding CurrentSubGoal.ProgressRatio, TargetNullValue='60*'}"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Background="#9146FF" CornerRadius="4,0,0,4"/>
+                                                <TextBlock Grid.ColumnSpan="2" Text="{Binding CurrentSubGoal.Description, TargetNullValue='Sub Goal'}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,15,0">
+                                                    <TextBlock Text="{Binding CurrentSubGoal.CurrentAmount, TargetNullValue=60}" FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text=" / " FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text="{Binding CurrentSubGoal.TargetAmount, TargetNullValue=100}" FontWeight="SemiBold" Foreground="White"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                    <Grid ColumnSpacing="10" Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Subscription Goals Message (Use {goal_title})" PlaceholderText="Goal completed! {goal_title}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Text="{Binding Config.UserActions.SubGoalReachedResponse, Mode=TwoWay}"/>
+                                        <Button Grid.Column="1" Content="Test Goal" Tag="Sub" Click="TestGoal_Click" VerticalAlignment="Bottom" Style="{StaticResource AccentButtonStyle}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Header="Follower Goal" HorizontalAlignment="Stretch">
+                                <StackPanel Spacing="10" Margin="0,10,0,0">
+                                    <Border Background="#18181B" BorderBrush="#2F2F35" BorderThickness="1" CornerRadius="8" Padding="20">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="{Binding CurrentFollowerGoal.Description, TargetNullValue='Follower Goal Preview'}" FontSize="12" Opacity="0.5" HorizontalAlignment="Center"/>
+                                            <Grid Height="40" CornerRadius="4" Background="#333333">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding CurrentFollowerGoal.ProgressRatio, TargetNullValue='60*'}"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Background="#9146FF" CornerRadius="4,0,0,4"/>
+                                                <TextBlock Grid.ColumnSpan="2" Text="{Binding CurrentFollowerGoal.Description, TargetNullValue='Follower Goal'}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,15,0">
+                                                    <TextBlock Text="{Binding CurrentFollowerGoal.CurrentAmount, TargetNullValue=60}" FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text=" / " FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text="{Binding CurrentFollowerGoal.TargetAmount, TargetNullValue=100}" FontWeight="SemiBold" Foreground="White"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                    <Grid ColumnSpacing="10" Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Follower Goals Message (Use {goal_title})" PlaceholderText="Goal completed! {goal_title}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Text="{Binding Config.UserActions.FollowerGoalReachedResponse, Mode=TwoWay}"/>
+                                        <Button Grid.Column="1" Content="Test Goal" Tag="Follower" Click="TestGoal_Click" VerticalAlignment="Bottom" Style="{StaticResource AccentButtonStyle}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Header="Bits Goal" HorizontalAlignment="Stretch">
+                                <StackPanel Spacing="10" Margin="0,10,0,0">
+                                    <Border Background="#18181B" BorderBrush="#2F2F35" BorderThickness="1" CornerRadius="8" Padding="20">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="{Binding CurrentBitsGoal.Description, TargetNullValue='Bits Goal Preview'}" FontSize="12" Opacity="0.5" HorizontalAlignment="Center"/>
+                                            <Grid Height="40" CornerRadius="4" Background="#333333">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding CurrentBitsGoal.ProgressRatio, TargetNullValue='60*'}"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Background="#9146FF" CornerRadius="4,0,0,4"/>
+                                                <TextBlock Grid.ColumnSpan="2" Text="{Binding CurrentBitsGoal.Description, TargetNullValue='Bits Goal'}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,15,0">
+                                                    <TextBlock Text="{Binding CurrentBitsGoal.CurrentAmount, TargetNullValue=60}" FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text=" / " FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text="{Binding CurrentBitsGoal.TargetAmount, TargetNullValue=100}" FontWeight="SemiBold" Foreground="White"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                    <Grid ColumnSpacing="10" Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Bits Goals Message (Use {goal_title})" PlaceholderText="Goal completed! {goal_title}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Text="{Binding Config.UserActions.BitsGoalReachedResponse, Mode=TwoWay}"/>
+                                        <Button Grid.Column="1" Content="Test Goal" Tag="Bits" Click="TestGoal_Click" VerticalAlignment="Bottom" Style="{StaticResource AccentButtonStyle}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Header="Channel Points Goal" HorizontalAlignment="Stretch">
+                                <StackPanel Spacing="10" Margin="0,10,0,0">
+                                    <Border Background="#18181B" BorderBrush="#2F2F35" BorderThickness="1" CornerRadius="8" Padding="20">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="{Binding CurrentPointsGoal.Description, TargetNullValue='Points Goal Preview'}" FontSize="12" Opacity="0.5" HorizontalAlignment="Center"/>
+                                            <Grid Height="40" CornerRadius="4" Background="#333333">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding CurrentPointsGoal.ProgressRatio, TargetNullValue='60*'}"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Background="#9146FF" CornerRadius="4,0,0,4"/>
+                                                <TextBlock Grid.ColumnSpan="2" Text="{Binding CurrentPointsGoal.Description, TargetNullValue='Points Goal'}" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,15,0">
+                                                    <TextBlock Text="{Binding CurrentPointsGoal.CurrentAmount, TargetNullValue=60}" FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text=" / " FontWeight="SemiBold" Foreground="White"/>
+                                                    <TextBlock Text="{Binding CurrentPointsGoal.TargetAmount, TargetNullValue=100}" FontWeight="SemiBold" Foreground="White"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                    <Grid ColumnSpacing="10" Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Channel Points Goals Message (Use {goal_title})" PlaceholderText="Goal completed! {goal_title}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Text="{Binding Config.UserActions.PointsGoalReachedResponse, Mode=TwoWay}"/>
+                                        <Button Grid.Column="1" Content="Test Goal" Tag="Points" Click="TestGoal_Click" VerticalAlignment="Bottom" Style="{StaticResource AccentButtonStyle}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Expander>
                         </StackPanel>
                     </Grid>
                 </ScrollViewer>
@@ -169,16 +374,22 @@
                                 <StackPanel x:Name="GuideBitsBlock" Spacing="8">
                                     <TextBlock Text="• {user} - Username of the contributor" FontSize="12" Opacity="0.9"/>
                                     <TextBlock Text="• {bits} - Total number of bits cheered" FontSize="12" Opacity="0.9"/>
+                                    <TextBlock Text="• {message} - The user's custom chat message" FontSize="12" Opacity="0.9"/>
+                                    <TextBlock Text="Note: Enable 'Read User Message' to have TTS automatically read their message." FontSize="11" Opacity="0.6" FontStyle="Italic"/>
                                 </StackPanel>
 
                                 <StackPanel x:Name="GuideSubsBlock" Spacing="8" Visibility="Collapsed">
                                     <TextBlock Text="• {user} - Username of the subscriber" FontSize="12" Opacity="0.9"/>
                                     <TextBlock Text="• {months} - Total months accumulated" FontSize="12" Opacity="0.9"/>
+                                    <TextBlock Text="• {message} - The user's custom chat message" FontSize="12" Opacity="0.9"/>
+                                    <TextBlock Text="Note: Enable 'Read User Message' to have TTS automatically read their message." FontSize="11" Opacity="0.6" FontStyle="Italic"/>
                                 </StackPanel>
 
                                 <StackPanel x:Name="GuideStreaksBlock" Spacing="8" Visibility="Collapsed">
                                     <TextBlock Text="• {user} - Username of the subscriber" FontSize="12" Opacity="0.9"/>
                                     <TextBlock Text="• {streak} - Months in consecutive streak" FontSize="12" Opacity="0.9"/>
+                                    <TextBlock Text="• {message} - The user's custom chat message" FontSize="12" Opacity="0.9"/>
+                                    <TextBlock Text="Note: Enable 'Read User Message' to have TTS automatically read their message." FontSize="11" Opacity="0.6" FontStyle="Italic"/>
                                 </StackPanel>
 
                                 <StackPanel x:Name="GuideGoalsBlock" Spacing="8" Visibility="Collapsed">

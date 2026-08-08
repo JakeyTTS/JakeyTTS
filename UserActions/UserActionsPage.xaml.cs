@@ -30,7 +30,7 @@ namespace JakeyTTS.UserActions
             }
         }
 
-        private void UpdateSubPageVisibility(string activeTag)
+        private async void UpdateSubPageVisibility(string activeTag)
         {
             if (BitsSubPage == null) return; // safety check to avoid null refs during initialization
 
@@ -45,6 +45,11 @@ namespace JakeyTTS.UserActions
             GuideSubsBlock.Visibility = activeTag == "Subs" ? Visibility.Visible : Visibility.Collapsed;
             GuideStreaksBlock.Visibility = activeTag == "Streaks" ? Visibility.Visible : Visibility.Collapsed;
             GuideGoalsBlock.Visibility = activeTag == "Goals" ? Visibility.Visible : Visibility.Collapsed;
+
+            if (activeTag == "Goals")
+            {
+                await _service.GetCreatorGoalsAsync();
+            }
         }
 
         private async void PlayTest_Click(object sender, RoutedEventArgs e)
@@ -85,11 +90,37 @@ namespace JakeyTTS.UserActions
                     await TtsEngine.Instance.ProcessAndSpeak(parsed, "test");
                 }
             }
-            else if (tag == "Goals")
+        }
+
+        private async void TestGoal_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.Tag is string goalType)
             {
-                if (!string.IsNullOrEmpty(_service.Config.UserActions.SubGoalReachedResponse))
+                string parsed = "";
+                string title = "Sample Goal";
+                if (goalType == "Sub")
                 {
-                    string parsed = _service.Config.UserActions.SubGoalReachedResponse.Replace("{goal_title}", "Surprise 24h Stream");
+                    title = _service.CurrentSubGoal?.Description ?? title;
+                    parsed = _service.Config.UserActions.SubGoalReachedResponse.Replace("{goal_title}", title);
+                }
+                else if (goalType == "Follower")
+                {
+                    title = _service.CurrentFollowerGoal?.Description ?? title;
+                    parsed = _service.Config.UserActions.FollowerGoalReachedResponse.Replace("{goal_title}", title);
+                }
+                else if (goalType == "Bits")
+                {
+                    title = _service.CurrentBitsGoal?.Description ?? title;
+                    parsed = _service.Config.UserActions.BitsGoalReachedResponse.Replace("{goal_title}", title);
+                }
+                else if (goalType == "Points")
+                {
+                    title = _service.CurrentPointsGoal?.Description ?? title;
+                    parsed = _service.Config.UserActions.PointsGoalReachedResponse.Replace("{goal_title}", title);
+                }
+
+                if (!string.IsNullOrEmpty(parsed))
+                {
                     await TtsEngine.Instance.ProcessAndSpeak(parsed, "test");
                 }
             }
@@ -123,6 +154,15 @@ namespace JakeyTTS.UserActions
         private void DeleteStreakAction_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.DataContext is UserActionItem item) _service.Config.UserActions.StreakActions.Remove(item);
+        }
+
+        private void UpgradeUserAction_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is UserActionItem item)
+            {
+                item.UpgradeToBlocks();
+                _service.Config.Save();
+            }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)

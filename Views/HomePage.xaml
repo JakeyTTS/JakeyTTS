@@ -7,6 +7,20 @@
     mc:Ignorable="d">
 
     <Grid>
+        <!-- Add InfoBar at Top -->
+        <InfoBar x:Name="ScopesInfoBar" 
+                 Severity="Warning"
+                 Title="Action Required"
+                 Message="Twitch permissions have been updated to support Subscriptions and Goals. Please re-connect your Broadcaster (and Bot) accounts in Settings."
+                 IsOpen="False"
+                 IsClosable="False"
+                 VerticalAlignment="Top"
+                 Margin="20">
+            <InfoBar.ActionButton>
+                <Button Content="Go to Settings" Click="GoToSettings_Click" />
+            </InfoBar.ActionButton>
+        </InfoBar>
+
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="25">
 
             <!-- App Icon & Title -->

@@ -535,12 +535,10 @@ namespace JakeyTTS.Core
         }
     }
 
-    public class UserActionItem : BaseNotify
+    public class UserActionItem : BaseNotify, IActionableItem
     {
         private double _threshold = 0;
         public double Threshold { get => _threshold; set { _threshold = value; OnPropertyChanged(); } }
-
-
 
         private string _response = "";
         public string Response { get => _response; set { _response = value; OnPropertyChanged(); } }
@@ -550,10 +548,98 @@ namespace JakeyTTS.Core
 
         private bool _shouldPlayUserMessage = true;
         public bool ShouldPlayUserMessage { get => _shouldPlayUserMessage; set { _shouldPlayUserMessage = value; OnPropertyChanged(); } }
+
+        private bool _playResponseAfterMessage = false;
+        public bool PlayResponseAfterMessage { get => _playResponseAfterMessage; set { _playResponseAfterMessage = value; OnPropertyChanged(); } }
+
+        private bool _shouldReplyInChat = false;
+        public bool ShouldReplyInChat { get => _shouldReplyInChat; set { _shouldReplyInChat = value; OnPropertyChanged(); } }
+
+        private bool _replyAsBot = false;
+        public bool ReplyAsBot { get => _replyAsBot; set { _replyAsBot = value; OnPropertyChanged(); } }
+
+        private bool _shouldSpeak = true;
+        public bool ShouldSpeak { get => _shouldSpeak; set { _shouldSpeak = value; OnPropertyChanged(); } }
+
+        private bool _isDefault = false;
+        public bool IsDefault { get => _isDefault; set { _isDefault = value; OnPropertyChanged(); } }
+
+        // Blocks System
+        private bool _useActionBlocks = false;
+        public bool UseActionBlocks
+        {
+            get => _useActionBlocks;
+            set { if (_useActionBlocks == value) return; _useActionBlocks = value; OnPropertyChanged(); }
+        }
+        
+        // Command Randomizer
+        private bool _generateRandomVariable = false;
+        public bool GenerateRandomVariable { get => _generateRandomVariable; set { _generateRandomVariable = value; OnPropertyChanged(); } }
+
+        private string _randomTargetScope = "Local";
+        public string RandomTargetScope { get => _randomTargetScope; set { _randomTargetScope = value; OnPropertyChanged(); } }
+
+        public System.Collections.ObjectModel.ObservableCollection<string> ScopeOptions { get; } = new System.Collections.ObjectModel.ObservableCollection<string> { "Local", "Global" };
+
+        private string _randomTargetVariable = "RandomRoll";
+        public string RandomTargetVariable { get => _randomTargetVariable; set { _randomTargetVariable = value; OnPropertyChanged(); } }
+        
+        private bool _randomIsFloat = false;
+        public bool RandomIsFloat { get => _randomIsFloat; set { _randomIsFloat = value; OnPropertyChanged(); } }
+
+        private double _randomMin = 1;
+        public double RandomMin { get => _randomMin; set { _randomMin = value; OnPropertyChanged(); OnPropertyChanged(nameof(RandomMinString)); } }
+
+        public string RandomMinString
+        {
+            get => _randomMin.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            set { if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val)) RandomMin = val; else OnPropertyChanged(); }
+        }
+
+        private double _randomMax = 100;
+        public double RandomMax { get => _randomMax; set { _randomMax = value; OnPropertyChanged(); OnPropertyChanged(nameof(RandomMaxString)); } }
+
+        public string RandomMaxString
+        {
+            get => _randomMax.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            set { if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val)) RandomMax = val; else OnPropertyChanged(); }
+        }
+        
+        public VariableStore LocalVariables { get; set; } = new();
+
+        public ObservableCollection<CommandAction> Actions { get; set; } = new();
+
+        public void UpgradeToBlocks()
+        {
+            if (UseActionBlocks) return;
+            Actions.Clear();
+
+            var newBlock = new CommandAction 
+            { 
+                Condition = CommandCondition.Always,
+                Response = Response,
+                ShouldSpeak = true, // By default, old actions spoke out loud
+                ShouldReplyInChat = false,
+                ReplyAsBot = false,
+                TriggerPlugin = "None",
+                WebsocketParam = ""
+            };
+            
+            Actions.Add(newBlock);
+            UseActionBlocks = true;
+        }
     }
 
     public class UserActionsConfig : BaseNotify
     {
+        private bool _isSubActionsEnabled = true;
+        public bool IsSubActionsEnabled { get => _isSubActionsEnabled; set { _isSubActionsEnabled = value; OnPropertyChanged(); } }
+
+        private bool _isBitActionsEnabled = true;
+        public bool IsBitActionsEnabled { get => _isBitActionsEnabled; set { _isBitActionsEnabled = value; OnPropertyChanged(); } }
+
+        private bool _isStreakActionsEnabled = true;
+        public bool IsStreakActionsEnabled { get => _isStreakActionsEnabled; set { _isStreakActionsEnabled = value; OnPropertyChanged(); } }
         public ObservableCollection<UserActionItem> BitActions { get; set; } = new()
         {
             new UserActionItem { Threshold = 100.0, Response = "{user} cheered {bits} bits! {message}", IsEnabled = true, ShouldPlayUserMessage = false }

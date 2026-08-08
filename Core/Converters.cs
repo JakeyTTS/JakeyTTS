@@ -143,5 +143,34 @@ namespace JakeyTTS.Core.Converters
     }
 
 
+    public class RatioToStarConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, string language)
+        {
+            try {
+                double current = System.Convert.ToDouble(value);
+                double target = System.Convert.ToDouble(parameter);
+                if (target <= 0) return new GridLength(0, GridUnitType.Star);
+                double ratio = Math.Clamp(current / target, 0, 1);
+                return new GridLength(ratio, GridUnitType.Star);
+            } catch { return new GridLength(0, GridUnitType.Star); }
+        }
+        public object ConvertBack(object v, Type t, object p, string l) => throw new NotImplementedException();
+    }
+
+    public class InverseRatioToStarConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, string language)
+        {
+            try {
+                double current = System.Convert.ToDouble(value);
+                double target = System.Convert.ToDouble(parameter);
+                if (target <= 0) return new GridLength(1, GridUnitType.Star);
+                double ratio = Math.Clamp(current / target, 0, 1);
+                return new GridLength(1 - ratio, GridUnitType.Star);
+            } catch { return new GridLength(1, GridUnitType.Star); }
+        }
+        public object ConvertBack(object v, Type t, object p, string l) => throw new NotImplementedException();
+    }
 }
 

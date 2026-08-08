@@ -39,6 +39,22 @@ namespace JakeyTTS.Views
             ConfigureBtn.Visibility = isConfigured ? Visibility.Collapsed : Visibility.Visible;
             StartBtn.Visibility = (!isRunning && isConfigured) ? Visibility.Visible : Visibility.Collapsed;
             StopBtn.Visibility = (isRunning && isConfigured) ? Visibility.Visible : Visibility.Collapsed;
+
+            if (isConfigured && _service.Config.ScopesVersion < 1)
+            {
+                ScopesInfoBar.IsOpen = true;
+                StartBtn.IsEnabled = false; // Block starting service if out of date
+            }
+            else
+            {
+                ScopesInfoBar.IsOpen = false;
+                StartBtn.IsEnabled = true;
+            }
+        }
+
+        private void GoToSettings_Click(object sender, RoutedEventArgs e)
+        {
+            this.Frame.Navigate(typeof(TTSConfigPage));
         }
 
         private async void ServiceToggle_Click(object sender, RoutedEventArgs e)

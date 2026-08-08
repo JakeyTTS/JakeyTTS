@@ -20,7 +20,7 @@ using TwitchLib.EventSub.Websockets;
 
 namespace JakeyTTS
 {
-    public class TwitchService
+    public class TwitchService : BaseNotify
     {
         private static TwitchService? _instance;
         public static TwitchService Instance => _instance ??= new TwitchService();
@@ -38,6 +38,68 @@ namespace JakeyTTS
 
         private readonly HttpClient _http = new HttpClient();
 
+        public class TwitchGoal
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("id")]
+            public string Id { get; set; } = string.Empty;
+            [System.Text.Json.Serialization.JsonPropertyName("type")]
+            public string Type { get; set; } = string.Empty;
+            [System.Text.Json.Serialization.JsonPropertyName("description")]
+            public string Description { get; set; } = string.Empty;
+            [System.Text.Json.Serialization.JsonPropertyName("current_amount")]
+            public int CurrentAmount { get; set; }
+            [System.Text.Json.Serialization.JsonPropertyName("target_amount")]
+            public int TargetAmount { get; set; }
+
+            [System.Text.Json.Serialization.JsonIgnore]
+            public Microsoft.UI.Xaml.GridLength ProgressRatio
+            {
+                get
+                {
+                    if (TargetAmount <= 0) return new Microsoft.UI.Xaml.GridLength(0, Microsoft.UI.Xaml.GridUnitType.Star);
+                    double ratio = Math.Clamp((double)CurrentAmount / TargetAmount, 0, 1);
+                    return new Microsoft.UI.Xaml.GridLength(ratio * 100, Microsoft.UI.Xaml.GridUnitType.Star);
+                }
+            }
+        }
+
+        public class TwitchGoalsResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("data")]
+            public List<TwitchGoal>? Data { get; set; }
+        }
+
+        private TwitchGoal? _currentSubGoal;
+        public TwitchGoal? CurrentSubGoal { get => _currentSubGoal; set { _currentSubGoal = value; OnPropertyChanged(); } }
+
+        private TwitchGoal? _currentFollowerGoal;
+        public TwitchGoal? CurrentFollowerGoal { get => _currentFollowerGoal; set { _currentFollowerGoal = value; OnPropertyChanged(); } }
+
+        private TwitchGoal? _currentBitsGoal;
+        public TwitchGoal? CurrentBitsGoal { get => _currentBitsGoal; set { _currentBitsGoal = value; OnPropertyChanged(); } }
+
+        private TwitchGoal? _currentPointsGoal;
+        public TwitchGoal? CurrentPointsGoal { get => _currentPointsGoal; set { _currentPointsGoal = value; OnPropertyChanged(); } }
+
+        public async Task GetCreatorGoalsAsync()
+        {
+            if (string.IsNullOrEmpty(Config.Token)) return;
+            try
+            {
+                PrepareHttp(Config.Token);
+                var res = await _http.GetStringAsync($"https://api.twitch.tv/helix/goals?broadcaster_id={Config.BroadcasterId}");
+                var json = JsonSerializer.Deserialize<TwitchGoalsResponse>(res);
+                if (json != null && json.Data != null)
+                {
+                    CurrentSubGoal = json.Data.FirstOrDefault(g => g.Type.Contains("sub"));
+                    CurrentFollowerGoal = json.Data.FirstOrDefault(g => g.Type.Contains("follow"));
+                    CurrentBitsGoal = json.Data.FirstOrDefault(g => g.Type.Contains("bit"));
+                    CurrentPointsGoal = json.Data.FirstOrDefault(g => g.Type.Contains("point"));
+                }
+            }
+            catch { }
+        }
+
         private TwitchService()
         {
             Config = AppConfig.Load();
@@ -51,7 +113,7 @@ namespace JakeyTTS
         private async Task HandleCheer(object? s, ChannelCheerArgs e)
         {
             var ev = e.Payload.Event;
-            if (Config.UserActions?.BitActions == null) return;
+            if (Config.UserActions?.BitActions == null || !Config.UserActions.IsBitActionsEnabled) return;
 
             var action = Config.UserActions.BitActions
                 .Where(a => a.IsEnabled && ev.Bits >= a.Threshold)
@@ -59,18 +121,42 @@ namespace JakeyTTS
 
             if (action != null)
             {
-                string res = ProcessScript(action.Response, ev.UserName, ev.Message ?? "", "");
-                res = res.Replace("{bits}", ev.Bits.ToString(), StringComparison.OrdinalIgnoreCase);
-
-                AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
-                await TtsEngine.Instance.ProcessAndSpeak(res, "bits");
-
-                if (action.ShouldPlayUserMessage && !string.IsNullOrWhiteSpace(ev.Message))
+                if (action.UseActionBlocks)
                 {
-                    string cleanUserMessage = Regex.Replace(ev.Message, @"\[.*?\]", "").Trim();
-                    if (!string.IsNullOrWhiteSpace(cleanUserMessage))
+                    var replacements = new Dictionary<string, string> { { "{bits}", ev.Bits.ToString() } };
+                    await ExecuteActionBlocks(action, "", ev.UserName, ev.Message ?? "", replacements);
+                }
+                else
+                {
+                    string res = ProcessScript(action.Response, ev.UserName, ev.Message ?? "", "");
+                    res = res.Replace("{bits}", ev.Bits.ToString(), StringComparison.OrdinalIgnoreCase);
+
+                    AddToHistory(ev.UserName, $"{ev.Bits} bits", "Bits");
+
+                    if (action.ShouldReplyInChat)
                     {
-                        await TtsEngine.Instance.ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "bits");
+                        await SendChatReply(res, action.ReplyAsBot);
+                    }
+
+                    string cleanUserMessage = Regex.Replace(ev.Message ?? "", @"\[.*?\]", "").Trim();
+                    bool hasUserMessage = action.ShouldPlayUserMessage && !string.IsNullOrWhiteSpace(cleanUserMessage);
+
+                    if (action.ShouldSpeak)
+                    {
+                        if (action.PlayResponseAfterMessage && hasUserMessage)
+                        {
+                            await TtsEngine.Instance.ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "bits");
+                            await TtsEngine.Instance.ProcessAndSpeak(res, "bits");
+                        }
+                        else if (hasUserMessage)
+                        {
+                            await TtsEngine.Instance.ProcessAndSpeak(res, "bits");
+                            await TtsEngine.Instance.ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "bits");
+                        }
+                        else
+                        {
+                            await TtsEngine.Instance.ProcessAndSpeak(res, "bits");
+                        }
                     }
                 }
             }
@@ -83,7 +169,7 @@ namespace JakeyTTS
         private async Task HandleSubscriptionMessage(object? s, ChannelSubscriptionMessageArgs e)
         {
             var ev = e.Payload.Event;
-            if (Config.UserActions == null) return;
+            if (Config.UserActions == null || !Config.UserActions.IsSubActionsEnabled) return;
 
             int cumulativeMonths = ev.CumulativeMonths;
             int? streakMonths = ev.StreakMonths;
@@ -91,26 +177,75 @@ namespace JakeyTTS
             var streakAction = Config.UserActions.StreakActions?.Where(a => a.IsEnabled && streakMonths >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
             var subAction = Config.UserActions.SubActions?.Where(a => a.IsEnabled && cumulativeMonths >= a.Threshold).OrderByDescending(a => a.Threshold).FirstOrDefault();
 
-            string response = "{user} subscribed for {months} months!";
-            bool shouldPlayText = true;
+            var action = streakAction ?? subAction;
 
-            if (streakAction != null) { response = streakAction.Response; shouldPlayText = streakAction.ShouldPlayUserMessage; }
-            else if (subAction != null) { response = subAction.Response; shouldPlayText = subAction.ShouldPlayUserMessage; }
-
-            string finalMsg = ProcessScript(response, ev.UserName, ev.Message?.Text ?? "", "");
-            finalMsg = finalMsg.Replace("{months}", cumulativeMonths.ToString(), StringComparison.OrdinalIgnoreCase)
-                               .Replace("{streak}", streakMonths.ToString(), StringComparison.OrdinalIgnoreCase);
-
-            AddToHistory(ev.UserName, "Subscription", "Sub");
-            await TtsEngine.Instance.ProcessAndSpeak(finalMsg, "subs");
-
-            string userWrittenText = ev.Message?.Text;
-            if (shouldPlayText && !string.IsNullOrWhiteSpace(userWrittenText))
+            if (action != null && action.UseActionBlocks)
             {
-                string cleanUserMessage = Regex.Replace(userWrittenText, @"\[.*?\]", "").Trim();
-                if (!string.IsNullOrWhiteSpace(cleanUserMessage))
+                var replacements = new Dictionary<string, string>
                 {
-                    await TtsEngine.Instance.ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "subs");
+                    { "{months}", cumulativeMonths.ToString() },
+                    { "{streak}", streakMonths.ToString() }
+                };
+                await ExecuteActionBlocks(action, "", ev.UserName, ev.Message?.Text ?? "", replacements);
+            }
+            else
+            {
+                string response = "{user} subscribed for {months} months!";
+                bool shouldPlayText = true;
+                bool shouldSpeak = true;
+                bool shouldReplyInChat = false;
+                bool replyAsBot = false;
+                bool playResponseAfter = false;
+
+                if (streakAction != null && Config.UserActions.IsStreakActionsEnabled) 
+                { 
+                    response = streakAction.Response; 
+                    shouldPlayText = streakAction.ShouldPlayUserMessage; 
+                    shouldSpeak = streakAction.ShouldSpeak;
+                    shouldReplyInChat = streakAction.ShouldReplyInChat;
+                    replyAsBot = streakAction.ReplyAsBot;
+                    playResponseAfter = streakAction.PlayResponseAfterMessage;
+                }
+                else if (subAction != null) 
+                { 
+                    response = subAction.Response; 
+                    shouldPlayText = subAction.ShouldPlayUserMessage; 
+                    shouldSpeak = subAction.ShouldSpeak;
+                    shouldReplyInChat = subAction.ShouldReplyInChat;
+                    replyAsBot = subAction.ReplyAsBot;
+                    playResponseAfter = subAction.PlayResponseAfterMessage;
+                }
+
+                string finalMsg = ProcessScript(response, ev.UserName, ev.Message?.Text ?? "", "");
+                finalMsg = finalMsg.Replace("{months}", cumulativeMonths.ToString(), StringComparison.OrdinalIgnoreCase)
+                                   .Replace("{streak}", streakMonths.ToString(), StringComparison.OrdinalIgnoreCase);
+
+                AddToHistory(ev.UserName, "Subscription", "Sub");
+
+                if (shouldReplyInChat)
+                {
+                    await SendChatReply(finalMsg, replyAsBot);
+                }
+
+                string cleanUserMessage = Regex.Replace(ev.Message?.Text ?? "", @"\[.*?\]", "").Trim();
+                bool hasUserMessage = shouldPlayText && !string.IsNullOrWhiteSpace(cleanUserMessage);
+
+                if (shouldSpeak)
+                {
+                    if (playResponseAfter && hasUserMessage)
+                    {
+                        await TtsEngine.Instance.ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "subs");
+                        await TtsEngine.Instance.ProcessAndSpeak(finalMsg, "subs");
+                    }
+                    else if (hasUserMessage)
+                    {
+                        await TtsEngine.Instance.ProcessAndSpeak(finalMsg, "subs");
+                        await TtsEngine.Instance.ProcessAndSpeak($"[reset][pause:500] {cleanUserMessage}", "subs");
+                    }
+                    else
+                    {
+                        await TtsEngine.Instance.ProcessAndSpeak(finalMsg, "subs");
+                    }
                 }
             }
         }
@@ -276,7 +411,7 @@ namespace JakeyTTS
          * It supports various condition types including message presence, variable comparisons, list emptiness, and random chance, 
          * allowing for complex command behaviors based on user input and dynamic variables.
          */
-        private async Task ExecuteActionBlocks(IActionableItem cmd, string trigger, string sender, string fullMessage)
+        private async Task ExecuteActionBlocks(IActionableItem cmd, string trigger, string sender, string fullMessage, Dictionary<string, string>? replacements = null)
         {
             foreach (var action in cmd.Actions)
             {
@@ -329,6 +464,13 @@ namespace JakeyTTS
                 }
 
                 string processedResponse = ProcessScript(action.Response, sender, fullMessage, trigger, cmd, cmd is RedeemItem ri3 ? ri3.Name : null);
+                if (replacements != null)
+                {
+                    foreach (var kvp in replacements)
+                    {
+                        processedResponse = processedResponse.Replace(kvp.Key, kvp.Value, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
                 
                 if (action.ShouldReplyInChat && !string.IsNullOrWhiteSpace(processedResponse))
                 {
@@ -619,7 +761,7 @@ namespace JakeyTTS
 
         public async Task PerformAuth(bool bot)
         {
-            string scp = bot ? "user:write:chat" : "user:read:chat+channel:read:redemptions+user:write:chat";
+            string scp = bot ? "user:write:chat" : "user:read:chat+channel:read:redemptions+user:write:chat+channel:read:subscriptions+bits:read+channel:read:goals";
             string url = $"https://id.twitch.tv/oauth2/authorize?client_id={ClientId}&redirect_uri={RedirectUri}&response_type=token&scope={scp}&force_verify=true";
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             using var lsn = new HttpListener(); lsn.Prefixes.Add(RedirectUri); lsn.Start();
@@ -628,7 +770,11 @@ namespace JakeyTTS
             ctx.Response.OutputStream.Write(buf, 0, buf.Length); ctx.Response.Close();
             var tctx = await lsn.GetContextAsync();
             string? t = tctx.Request.QueryString["access_token"]; tctx.Response.Close(); lsn.Stop();
-            if (!string.IsNullOrEmpty(t)) { await FetchTwitchUser(t, bot); Config.Save(); }
+            if (!string.IsNullOrEmpty(t)) { 
+                await FetchTwitchUser(t, bot); 
+                Config.ScopesVersion = 1; // Updated scopes accepted
+                Config.Save(); 
+            }
         }
 
         private async Task FetchTwitchUser(string token, bool isBot)
